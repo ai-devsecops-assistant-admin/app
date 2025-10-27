@@ -1,0 +1,87 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: app-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: application_health
+      interval: 30s
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service, environment)
+            /
+            sum(rate(http_requests_total[5m])) by (service, environment)
+            > 0.01
+          for: 5m
+          labels:
+            severity: critical
+            component: application
+          annotations:
+            summary: "High error rate for {{ $labels.service }} in {{ $labels.environment }}"
+            description: "Error rate is {{ $value | humanizePercentage }}"
+
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service, environment)
+            ) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            component: application
+          annotations:
+            summary: "High latency for {{ $labels.service }} in {{ $labels.environment }}"
+            description: "95th percentile latency is {{ $value }}s"
+
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total[15m]) > 0
+          for: 15m
+          labels:
+            severity: critical
+            component: kubernetes
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash looping"
+            description: "Pod has restarted {{ $value }} times in the last 15 minutes"
+
+        - alert: DeploymentReplicasMismatch
+          expr: |
+            kube_deployment_spec_replicas
+            !=
+            kube_deployment_status_replicas_available
+          for: 15m
+          labels:
+            severity: warning
+            component: kubernetes
+          annotations:
+            summary: "Deployment {{ $labels.deployment }} has mismatched replicas"
+            description: "Desired: {{ $value }}, Available: {{ $value }}"
+
+    - name: resource_usage
+      interval: 1m
+      rules:
+        - alert: HighMemoryUsage
+          expr: |
+            container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+          for: 10m
+          labels:
+            severity: warning
+            component: resources
+          annotations:
+            summary: "High memory usage for {{ $labels.pod }}"
+            description: "Memory usage is {{ $value | humanizePercentage }} of limit"
+
+        - alert: HighCPUUsage
+          expr: |
+            rate(container_cpu_usage_seconds_total[5m]) / container_spec_cpu_quota * 100 > 90
+          for: 15m
+          labels:
+            severity: warning
+            component: resources
+          annotations:
+            summary: "High CPU usage for {{ $labels.pod }}"
+            description: "CPU usage is {{ $value }}% of limit"

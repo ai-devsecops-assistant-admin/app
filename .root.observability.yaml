@@ -1,0 +1,49 @@
+observability:
+  metrics:
+    prometheus:
+      enabled: true
+      retention: 15d
+      scrape_interval: 30s
+
+    custom_metrics:
+      - naming_compliance_rate
+      - naming_compliance_violations_total
+      - naming_compliance_resources_total
+      - auto_fix_attempts_total
+      - auto_fix_success_total
+
+  logging:
+    loki:
+      enabled: true
+      retention: 30d
+
+    levels:
+      production: info
+      staging: debug
+      development: debug
+
+  tracing:
+    tempo:
+      enabled: true
+      sampling_rate: 0.1
+
+  alerting:
+    prometheus:
+      enabled: true
+
+    severity_levels:
+      P0: critical
+      P1: error
+      P2: warning
+      P3: info
+
+    notification_channels:
+      - pagerduty
+      - slack
+      - email
+
+  dashboards:
+    grafana:
+      - naming-compliance.json
+      - ops-sla-overview.json
+      - security-overview.json

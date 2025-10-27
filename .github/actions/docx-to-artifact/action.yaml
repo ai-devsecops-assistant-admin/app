@@ -1,0 +1,50 @@
+name: 'DOCX to Artifact'
+description: 'Convert DOCX files to YAML/JSON/Markdown/Python artifacts'
+author: 'Platform Team'
+
+inputs:
+  docx-path:
+    description: 'Path to the DOCX file'
+    required: true
+  output-format:
+    description: 'Output format (yaml, json, markdown, python)'
+    required: true
+    default: 'yaml'
+  output-path:
+    description: 'Path to save the converted artifact'
+    required: false
+
+outputs:
+  artifact-path:
+    description: 'Path to the generated artifact'
+    value: ${{ steps.convert.outputs.path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install python-docx pyyaml
+
+    - name: Convert DOCX
+      id: convert
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/convert.py \
+          --input "${{ inputs.docx-path }}" \
+          --format "${{ inputs.output-format }}" \
+          --output "${{ inputs.output-path || 'artifact' }}"
+
+        echo "path=$(pwd)/artifact.${{ inputs.output-format }}" >> $GITHUB_OUTPUT
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: converted-artifact
+        path: artifact.${{ inputs.output-format }}

@@ -1,0 +1,66 @@
+{
+  "dashboard": {
+    "title": "Naming Compliance Dashboard",
+    "tags": ["governance", "naming", "compliance"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Naming Compliance Rate",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "100 * (1 - (sum(naming_compliance_violations_total) / sum(naming_compliance_resources_total)))",
+            "legendFormat": "NCR %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 80, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Total Violations Over Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(naming_compliance_violations_total)",
+            "legendFormat": "Total Violations"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Violations by Environment",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (environment) (naming_compliance_violations_total)",
+            "legendFormat": "{{ environment }}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Auto-Fix Success Rate",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "100 * (sum(auto_fix_success_total) / sum(auto_fix_attempts_total))",
+            "legendFormat": "ARS %"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+governance:
+  approvers:
+    - platform-team-lead
+    - security-lead
+
+  policies:
+    naming:
+      pattern: '^(dev|staging|prod)-[a-z0-9-]+-(deploy|svc|ing|cm|secret)-v\d+\.\d+\.\d+(-[A-Za-z0-9]+)?$'
+      enforcement: strict
+      auto_fix: true
+
+    security:
+      sbom_required: true
+      slsa_level: 3
+      cosign_keyless: true
+      vulnerability_threshold:
+        critical: 0
+        high: 5
+
+    resource_limits:
+      cpu:
+        min: "100m"
+        max: "4000m"
+      memory:
+        min: "128Mi"
+        max: "8Gi"
+
+  exceptions:
+    - resource: "dev-*"
+      reason: "Development environment - relaxed policies"
+      approved_by: "platform-team-lead"
+      expires: "2025-12-31"
+
+  compliance:
+    frameworks:
+      - SOC2
+      - ISO27001
+      - CIS-Kubernetes
+
+    audit_retention: 2555 # 7 years in days
+
+    required_labels:
+      - app
+      - version
+      - environment
+      - team

@@ -1,0 +1,66 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: naming-convention-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: naming_compliance
+      interval: 30s
+      rules:
+        - alert: NamingComplianceRateCritical
+          expr: |
+            100 * (1 - (sum by (environment) (naming_compliance_violations_total) / sum by (environment) (naming_compliance_resources_total))) < 80
+          for: 15m
+          labels:
+            severity: critical
+            component: governance
+          annotations:
+            summary: "Naming compliance rate critically low in {{ $labels.environment }}"
+            description: "Naming Compliance Rate is {{ $value }}% which is below 80% threshold in {{ $labels.environment }}"
+
+        - alert: NamingComplianceRateWarning
+          expr: |
+            100 * (1 - (sum by (environment) (naming_compliance_violations_total) / sum by (environment) (naming_compliance_resources_total))) < 95
+          for: 30m
+          labels:
+            severity: warning
+            component: governance
+          annotations:
+            summary: "Naming compliance rate below target in {{ $labels.environment }}"
+            description: "Naming Compliance Rate is {{ $value }}% which is below 95% target in {{ $labels.environment }}"
+
+        - alert: HighViolationRate
+          expr: |
+            rate(naming_compliance_violations_total[5m]) > 10
+          for: 10m
+          labels:
+            severity: warning
+            component: governance
+          annotations:
+            summary: "High rate of naming violations detected"
+            description: "Violation rate is {{ $value }} per second, which is unusually high"
+
+        - alert: AutoFixFailureRateHigh
+          expr: |
+            100 * (1 - (sum(auto_fix_success_total) / sum(auto_fix_attempts_total))) > 20
+          for: 1h
+          labels:
+            severity: warning
+            component: auto-fix-bot
+          annotations:
+            summary: "Auto-fix bot failure rate is high"
+            description: "Auto-fix failure rate is {{ $value }}%, exceeding 20% threshold"
+
+        - alert: ViolationFixCyclesSlow
+          expr: |
+            histogram_quantile(0.95, rate(violation_fix_duration_seconds_bucket[1h])) > 172800
+          for: 2h
+          labels:
+            severity: warning
+            component: governance
+          annotations:
+            summary: "Violation fix cycles taking too long"
+            description: "95th percentile fix time is {{ $value }}s (> 48 hours)"

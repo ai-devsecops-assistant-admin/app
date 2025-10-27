@@ -1,0 +1,102 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: naming-convention
+  annotations:
+    policies.kyverno.io/title: Enforce Naming Convention
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Deployment, Service, Ingress, ConfigMap, Secret
+    policies.kyverno.io/description: >-
+      Enforces naming conventions for Kubernetes resources to ensure consistency
+      and enable automated governance.
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+    - name: check-deployment-naming
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+      validate:
+        message: >-
+          Deployment name must follow pattern:
+          (dev|staging|prod)-[a-z0-9-]+-deploy-v{semver}
+        pattern:
+          metadata:
+            name: "(dev|staging|prod)-?*-deploy-v?*"
+
+    - name: check-service-naming
+      match:
+        any:
+          - resources:
+              kinds:
+                - Service
+      validate:
+        message: >-
+          Service name must follow pattern:
+          (dev|staging|prod)-[a-z0-9-]+-svc-v{semver}
+        pattern:
+          metadata:
+            name: "(dev|staging|prod)-?*-svc-v?*"
+
+    - name: check-ingress-naming
+      match:
+        any:
+          - resources:
+              kinds:
+                - Ingress
+      validate:
+        message: >-
+          Ingress name must follow pattern:
+          (dev|staging|prod)-[a-z0-9-]+-ing-v{semver}
+        pattern:
+          metadata:
+            name: "(dev|staging|prod)-?*-ing-v?*"
+
+    - name: check-configmap-naming
+      match:
+        any:
+          - resources:
+              kinds:
+                - ConfigMap
+      validate:
+        message: >-
+          ConfigMap name must follow pattern:
+          (dev|staging|prod)-[a-z0-9-]+-cm-v{semver}
+        pattern:
+          metadata:
+            name: "(dev|staging|prod)-?*-cm-v?*"
+
+    - name: check-secret-naming
+      match:
+        any:
+          - resources:
+              kinds:
+                - Secret
+      validate:
+        message: >-
+          Secret name must follow pattern:
+          (dev|staging|prod)-[a-z0-9-]+-secret-v{semver}
+        pattern:
+          metadata:
+            name: "(dev|staging|prod)-?*-secret-v?*"
+
+    - name: require-labels
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - Service
+      validate:
+        message: "Resources must have 'app', 'version', 'environment', and 'team' labels"
+        pattern:
+          metadata:
+            labels:
+              app: "?*"
+              version: "?*"
+              environment: "dev|staging|prod"
+              team: "?*"

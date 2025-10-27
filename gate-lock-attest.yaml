@@ -1,0 +1,63 @@
+deployment_gates:
+  freeze_windows:
+    - name: "End of Quarter Freeze"
+      start: "2025-03-28T00:00:00Z"
+      end: "2025-04-01T00:00:00Z"
+      reason: "Financial quarter end"
+
+    - name: "Holiday Freeze"
+      start: "2025-12-24T00:00:00Z"
+      end: "2026-01-02T00:00:00Z"
+      reason: "Holiday season"
+
+  attestation_requirements:
+    production:
+      - type: slsa-provenance
+        level: 3
+        required: true
+
+      - type: sbom
+        format: spdx
+        required: true
+
+      - type: signature
+        tool: cosign
+        keyless: true
+        required: true
+
+      - type: vulnerability-scan
+        tool: trivy
+        max_critical: 0
+        max_high: 5
+        required: true
+
+    staging:
+      - type: vulnerability-scan
+        tool: trivy
+        max_critical: 0
+        max_high: 10
+        required: true
+
+    development:
+      - type: vulnerability-scan
+        tool: trivy
+        required: false
+
+  approval_workflows:
+    production:
+      required_approvers: 2
+      teams:
+        - platform-team
+        - security-team
+
+    staging:
+      required_approvers: 1
+      teams:
+        - platform-team
+
+  emergency_override:
+    enabled: true
+    requires:
+      - justification
+      - manager_approval
+    audit: true

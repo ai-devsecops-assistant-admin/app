@@ -1,0 +1,49 @@
+security:
+  sbom:
+    enabled: true
+    format: spdx-json
+    tool: syft
+
+  provenance:
+    enabled: true
+    level: 3
+    generator: slsa-github-generator
+
+  signing:
+    enabled: true
+    tool: cosign
+    keyless: true
+    oidc_issuer: https://token.actions.githubusercontent.com
+
+  scanning:
+    container:
+      tool: trivy
+      severity:
+        - CRITICAL
+        - HIGH
+      exit_on_error: true
+
+    code:
+      sast:
+        - codeql
+        - semgrep
+
+    secrets:
+      tool: gitleaks
+
+    iac:
+      tool: checkov
+
+  dependencies:
+    go:
+      allowed_licenses:
+        - MIT
+        - Apache-2.0
+        - BSD-3-Clause
+
+    npm:
+      audit_level: moderate
+
+  network:
+    egress_control: true
+    zero_trust: true
