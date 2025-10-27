@@ -1,0 +1,25 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: my-app-prod
+  namespace: flux-system
+spec:
+  interval: 5m
+  path: ./deploy/kustomize/overlays/prod
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: platform-governance
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: prod-my-app-api
+      namespace: prod
+  timeout: 5m
+  wait: true
+  postBuild:
+    substitute:
+      environment: production
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-config

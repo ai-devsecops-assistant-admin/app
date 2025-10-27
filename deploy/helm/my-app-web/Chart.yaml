@@ -1,0 +1,13 @@
+apiVersion: v2
+name: my-app-web
+description: Helm chart for My App Web UI
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - web
+  - frontend
+  - angular
+maintainers:
+  - name: Platform Team
+    email: platform-team@example.com

@@ -1,0 +1,17 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: platform-governance
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/example/platform-governance.git
+  ref:
+    branch: main
+  secretRef:
+    name: git-credentials
+  ignore: |
+    # exclude all
+    /*
+    # include deploy directory
+    !/deploy

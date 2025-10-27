@@ -14,6 +14,8 @@ jobs:
   build:
     name: Build and Attest
     runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -22,6 +24,7 @@ jobs:
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
       - name: Build image
+        id: build
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
           context: .
@@ -37,6 +40,12 @@ jobs:
           artifact-name: sbom-spdx.json
           output-file: sbom-spdx.json
           format: spdx-json
+
+      - name: Generate artifact hash for provenance
+        id: hash
+        run: |
+          set -euo pipefail
+          echo "digests=$(sha256sum sbom-spdx.json | awk '{print $1}' | base64 -w0)" >> "$GITHUB_OUTPUT"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0

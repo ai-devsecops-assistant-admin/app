@@ -1,0 +1,122 @@
+lockfileVersion: '6.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+dependencies:
+  '@angular/animations':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/core@17.0.8)
+  '@angular/common':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/core@17.0.8)(rxjs@7.8.1)
+  '@angular/compiler':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/core@17.0.8)
+  '@angular/core':
+    specifier: ^17.0.0
+    version: 17.0.8(rxjs@7.8.1)(zone.js@0.14.2)
+  '@angular/forms':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/common@17.0.8)(@angular/core@17.0.8)
+  '@angular/platform-browser':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/common@17.0.8)(@angular/core@17.0.8)
+  '@angular/platform-browser-dynamic':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/compiler@17.0.8)(@angular/core@17.0.8)
+  '@angular/router':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/common@17.0.8)(@angular/core@17.0.8)
+  rxjs:
+    specifier: ~7.8.0
+    version: 7.8.1
+  tslib:
+    specifier: ^2.3.0
+    version: 2.6.2
+  zone.js:
+    specifier: ~0.14.2
+    version: 0.14.2
+
+devDependencies:
+  '@angular-devkit/build-angular':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/compiler-cli@17.0.8)(@types/node@20.10.6)(typescript@5.2.2)
+  '@angular/cli':
+    specifier: ^17.0.0
+    version: 17.0.8
+  '@angular/compiler-cli':
+    specifier: ^17.0.0
+    version: 17.0.8(@angular/compiler@17.0.8)(typescript@5.2.2)
+  '@types/jasmine':
+    specifier: ~5.1.0
+    version: 5.1.4
+  '@types/node':
+    specifier: ^20.10.0
+    version: 20.10.6
+  jasmine-core:
+    specifier: ~5.1.0
+    version: 5.1.1
+  karma:
+    specifier: ~6.4.0
+    version: 6.4.2
+  karma-chrome-launcher:
+    specifier: ~3.2.0
+    version: 3.2.0
+  karma-coverage:
+    specifier: ~2.2.0
+    version: 2.2.0
+  karma-jasmine:
+    specifier: ~5.1.0
+    version: 5.1.0
+  karma-jasmine-html-reporter:
+    specifier: ~2.1.0
+    version: 2.1.0
+  typescript:
+    specifier: ~5.2.2
+    version: 5.2.2
+
+packages:
+
+  /@angular/animations@17.0.8:
+    resolution: {integrity: sha512-VYPjBZXby1H7RX0/2TphOvlTv/4h0DcrRnlqwM5Xa4WfKWz8qM+H3YqRb0iWMqZ0Z3bLjKU3C6L4PtJRFdKQfg==}
+    engines: {node: ^18.13.0 || >=20.9.0}
+    peerDependencies:
+      '@angular/core': 17.0.8
+    dependencies:
+      '@angular/core': 17.0.8(rxjs@7.8.1)(zone.js@0.14.2)
+      tslib: 2.6.2
+    dev: false
+
+  /@angular/common@17.0.8:
+    resolution: {integrity: sha512-VQTMWk1SPL0eQ+0NaIWlBd0e0TYuQmYoGLGevp4mj4F/LQr+lNqaFWfmb9bXSIqPsqXlNjFBqMNJdPqKV0KZrg==}
+    engines: {node: ^18.13.0 || >=20.9.0}
+    peerDependencies:
+      '@angular/core': 17.0.8
+      rxjs: ^6.5.3 || ^7.4.0
+    dependencies:
+      '@angular/core': 17.0.8(rxjs@7.8.1)(zone.js@0.14.2)
+      rxjs: 7.8.1
+      tslib: 2.6.2
+    dev: false
+
+  /rxjs@7.8.1:
+    resolution: {integrity: sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==}
+    dependencies:
+      tslib: 2.6.2
+    dev: false
+
+  /tslib@2.6.2:
+    resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
+    dev: false
+
+  /typescript@5.2.2:
+    resolution: {integrity: sha512-mI4WrpHsbCIcwT9cF4FZvr80QUeKvsUsUvKDoR+X/7XHQH98xYD8YHZg7ANtz2GtZt/CBq2QJ0thkGJMHfqc1w==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+    dev: true
+
+  /zone.js@0.14.2:
+    resolution: {integrity: sha512-X2+l7cZ3qBXmADOOvL76p2Y+NMfJFbfLRl5kMf5sPKfI7t0hxUj1+KkR9rPpGlSNPANKqxGu0MBXCpTvbNESOw==}
+    dev: false

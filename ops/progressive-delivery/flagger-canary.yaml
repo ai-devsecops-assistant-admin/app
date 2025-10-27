@@ -1,0 +1,195 @@
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: my-app-api
+  namespace: prod
+spec:
+  # Deployment reference
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: prod-my-app-api-deploy-v1.0.0
+
+  # HPA reference (optional)
+  autoscalerRef:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    name: prod-my-app-api-hpa
+
+  # Service mesh provider
+  provider: istio
+
+  # Ingress reference
+  ingressRef:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    name: prod-my-app-api-ing-v1.0.0
+
+  # Progressive traffic shift
+  service:
+    # Service port
+    port: 8080
+    # Container port
+    targetPort: 8080
+    # Service mesh specific
+    gateways:
+      - public-gateway.istio-system.svc.cluster.local
+    hosts:
+      - api.example.com
+    trafficPolicy:
+      tls:
+        mode: DISABLE
+    retries:
+      attempts: 3
+      perTryTimeout: 5s
+      retryOn: "gateway-error,connect-failure,refused-stream"
+
+  # Canary analysis
+  analysis:
+    # Schedule interval
+    interval: 1m
+    # Max number of failed checks before rollback
+    threshold: 5
+    # Max traffic percentage routed to canary
+    maxWeight: 50
+    # Canary increment step
+    stepWeight: 10
+    # Canary promotion gate
+    # Pauses rollout and requires manual approval
+    webhooks:
+      - name: acceptance-test
+        type: pre-rollout
+        url: http://flagger-loadtester.test/
+        timeout: 30s
+        metadata:
+          type: bash
+          cmd: "curl -sd 'test' http://my-app-api-canary.prod:8080/health | grep OK"
+      - name: load-test
+        type: rollout
+        url: http://flagger-loadtester.test/
+        timeout: 5s
+        metadata:
+          cmd: "hey -z 1m -q 10 -c 2 http://my-app-api-canary.prod:8080/health"
+      - name: conformance-test
+        type: post-rollout
+        url: http://flagger-loadtester.test/
+        timeout: 30s
+        metadata:
+          type: bash
+          cmd: "curl -sd 'test' http://my-app-api.prod:8080/metrics | grep naming_compliance"
+
+    # Metric checks
+    metrics:
+      - name: request-success-rate
+        # Minimum success rate (non 5xx responses) percentage
+        thresholdRange:
+          min: 99
+        interval: 1m
+
+      - name: request-duration
+        # Maximum request duration P99 in milliseconds
+        thresholdRange:
+          max: 500
+        interval: 1m
+
+      - name: error-rate
+        templateRef:
+          name: error-rate
+          namespace: flagger-system
+        thresholdRange:
+          max: 1
+        interval: 1m
+
+    # Alert channels
+    alerts:
+      - name: "Canary promotion started"
+        severity: info
+        providerRef:
+          name: on-call
+          namespace: flagger-system
+      - name: "Canary promotion succeeded"
+        severity: info
+        providerRef:
+          name: on-call
+          namespace: flagger-system
+      - name: "Canary promotion failed"
+        severity: warn
+        providerRef:
+          name: on-call
+          namespace: flagger-system
+
+  # Rollback in case of metric check failures
+  skipAnalysis: false
+---
+# Metric template for custom error rate
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: error-rate
+  namespace: flagger-system
+spec:
+  provider:
+    type: prometheus
+    address: http://prometheus.observability:9090
+  query: |
+    100 - sum(
+      rate(
+        http_requests_total{
+          namespace="{{ namespace }}",
+          deployment=~"{{ target }}",
+          status!~"5.*"
+        }[{{ interval }}]
+      )
+    )
+    /
+    sum(
+      rate(
+        http_requests_total{
+          namespace="{{ namespace }}",
+          deployment=~"{{ target }}"
+        }[{{ interval }}]
+      )
+    )
+    * 100
+---
+# Alert provider for Slack
+apiVersion: flagger.app/v1beta1
+kind: AlertProvider
+metadata:
+  name: on-call
+  namespace: flagger-system
+spec:
+  type: slack
+  channel: platform-deployments
+  username: flagger
+  # Webhook address (replace with your Slack webhook URL)
+  address: https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+---
+# Canary for staging environment
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: my-app-api
+  namespace: staging
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: staging-my-app-api-deploy-v1.0.0
+  service:
+    port: 8080
+    targetPort: 8080
+  analysis:
+    interval: 30s
+    threshold: 3
+    maxWeight: 50
+    stepWeight: 20
+    metrics:
+      - name: request-success-rate
+        thresholdRange:
+          min: 95
+        interval: 30s
+      - name: request-duration
+        thresholdRange:
+          max: 1000
+        interval: 30s
