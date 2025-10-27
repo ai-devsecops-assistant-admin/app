@@ -15,9 +15,7 @@ fi
 
 echo "Validating naming conventions in $MANIFEST_FILE..."
 
-conftest test "$MANIFEST_FILE" -p .config/conftest/policies/naming_policy.rego
-
-if [ $? -eq 0 ]; then
+if conftest test "$MANIFEST_FILE" -p .config/conftest/policies/naming_policy.rego; then
     echo "✅ All naming conventions are valid!"
     exit 0
 else
