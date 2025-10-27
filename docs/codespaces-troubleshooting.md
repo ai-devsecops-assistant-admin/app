@@ -184,7 +184,7 @@ Regularly rebuild container to get latest tools and configurations:
 - [GitHub Codespaces 官方文檔](https://docs.github.com/en/codespaces)
 - [GitHub CLI 文檔](https://cli.github.com/manual/)
 - [Devcontainer 規範](https://containers.dev/)
-- [專案 Devcontainer 文檔](.devcontainer/README.md)
+- [專案 Devcontainer 文檔](../.devcontainer/README.md)
 
 ## 需要幫助？(Need Help?)
 
@@ -192,7 +192,7 @@ Regularly rebuild container to get latest tools and configurations:
 
 If none of the above solutions work:
 
-1. 查看 [.devcontainer/README.md](./.devcontainer/README.md) 獲取詳細資訊
+1. 查看 [.devcontainer/README.md](../.devcontainer/README.md) 獲取詳細資訊
 2. 查看 GitHub Codespaces 日誌以了解錯誤詳情
 3. 在專案中創建 Issue，包含：
    - 錯誤訊息的完整內容
@@ -201,7 +201,7 @@ If none of the above solutions work:
 
 ---
 
-1. Check [.devcontainer/README.md](./.devcontainer/README.md) for detailed information
+1. Check [.devcontainer/README.md](../.devcontainer/README.md) for detailed information
 2. Review GitHub Codespaces logs for error details
 3. Create an Issue in the project including:
    - Full error message
