@@ -1,9 +1,5 @@
 module github.com/example/platform-governance/apps/auto-fix-bot
 
-go 1.24.0
-
-toolchain go1.24.6
-
 require (
 	github.com/google/go-github/v57 v57.0.0
 	github.com/spf13/cobra v1.8.0
