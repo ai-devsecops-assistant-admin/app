@@ -19,8 +19,10 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
-    ).subscribe((event: NavigationEnd) => {
-      this.metricsService.recordPageView(event.urlAfterRedirects);
+    ).subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.metricsService.recordPageView(event.urlAfterRedirects);
+      }
     });
   }
 }
