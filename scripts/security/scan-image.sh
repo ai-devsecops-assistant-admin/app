@@ -12,13 +12,12 @@ echo "Scanning image: $IMAGE"
 
 # Run Trivy scan
 echo "Running Trivy vulnerability scan..."
-trivy image \
+if trivy image \
     --severity CRITICAL,HIGH \
     --exit-code 1 \
     --format table \
     "$IMAGE"
-
-if [ $? -eq 0 ]; then
+then
     echo "✅ No critical or high vulnerabilities found"
 else
     echo "❌ Vulnerabilities detected!"
