@@ -1,0 +1,31 @@
+<div class="dashboard">
+  <h1>DevSecOps Dashboard</h1>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <div class="metrics-grid" *ngIf="!loading && metrics">
+    <app-metrics-widget
+      title="Naming Compliance Rate"
+      [value]="metrics.namingComplianceRate"
+      unit="%"
+      [isPercentage]="true"
+    ></app-metrics-widget>
+
+    <app-metrics-widget
+      title="Total Resources"
+      [value]="metrics.totalResources"
+    ></app-metrics-widget>
+
+    <app-metrics-widget
+      title="Active Violations"
+      [value]="metrics.violations"
+      type="warning"
+    ></app-metrics-widget>
+
+    <app-metrics-widget
+      title="Auto-Fixed Issues"
+      [value]="metrics.autoFixedIssues"
+      type="success"
+    ></app-metrics-widget>
+  </div>
+</div>
