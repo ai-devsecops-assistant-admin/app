@@ -1,0 +1,83 @@
+# Auto-Fix Bot Configuration
+# Defines mappings for automated fixes
+
+version: "1.0"
+
+# Workflow security hardening rules
+workflows:
+  security:
+    - name: pinned-actions
+      description: "Ensure all GitHub Actions use SHA pinning"
+      pattern: "uses:\\s+([^@\\s]+)@([^\\s#]+)"
+      enabled: true
+
+    - name: permissions
+      description: "Ensure workflows have minimal permissions"
+      enabled: true
+      required_permissions:
+        - "contents: read"
+
+# Dependency update rules
+dependencies:
+  go:
+    - name: security-updates
+      description: "Auto-update Go dependencies with security fixes"
+      enabled: true
+      severity: ["CRITICAL", "HIGH"]
+
+    - name: minor-updates
+      description: "Auto-update minor version bumps"
+      enabled: false
+
+  npm:
+    - name: security-updates
+      description: "Auto-update npm dependencies with security fixes"
+      enabled: true
+      severity: ["CRITICAL", "HIGH"]
+
+# Linting auto-fixes
+linting:
+  go:
+    - name: golangci-lint
+      description: "Auto-fix golangci-lint issues"
+      enabled: true
+      safe_only: true
+
+  yaml:
+    - name: yamllint
+      description: "Auto-fix YAML formatting"
+      enabled: true
+
+# Docker security improvements
+docker:
+  - name: base-image-updates
+    description: "Update Docker base images"
+    enabled: true
+    allowed_registries:
+      - "gcr.io/distroless"
+      - "docker.io/library"
+
+  - name: security-best-practices
+    description: "Apply Docker security best practices"
+    enabled: true
+    checks:
+      - "user-nonroot"
+      - "healthcheck"
+      - "minimal-layers"
+
+# File patterns to ignore
+ignore_patterns:
+  - "vendor/"
+  - "node_modules/"
+  - "*.lock"
+  - "go.sum"
+  - "pnpm-lock.yaml"
+
+# PR settings
+pull_request:
+  auto_merge: false
+  labels:
+    - "automated"
+    - "auto-fix-bot"
+  reviewers: []
+  assignees: []
