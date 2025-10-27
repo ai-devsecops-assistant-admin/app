@@ -1,0 +1,81 @@
+{
+  "name": "Platform Governance DevSecOps",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": true,
+      "installYarnUsingApt": true
+    },
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.21"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "hashicorp.terraform",
+        "redhat.vscode-yaml",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github"
+      ],
+      "settings": {
+        "go.useLanguageServer": true,
+        "go.toolsManagement.autoUpdate": true,
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.autoSave": "afterDelay",
+        "editor.formatOnSave": true,
+        "git.autofetch": true
+      }
+    }
+  },
+  "forwardPorts": [3000, 4200, 8080, 9090],
+  "portsAttributes": {
+    "3000": {
+      "label": "Web UI",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "API Server",
+      "onAutoForward": "notify"
+    },
+    "9090": {
+      "label": "Prometheus",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "gh auth status || echo 'Please authenticate with: gh auth login'",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",
+    "PATH": "${containerEnv:PATH}:/home/vscode/go/bin:/home/vscode/.local/bin"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+  ],
+  "runArgs": [
+    "--init"
+  ]
+}
