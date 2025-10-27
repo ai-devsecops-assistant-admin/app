@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-governance
+  namespace: argocd
+spec:
+  description: Platform Governance Project
+
+  sourceRepos:
+    - https://github.com/example/platform-governance.git
+
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: platform-admin
+      description: Platform administrators
+      policies:
+        - p, proj:platform-governance:platform-admin, applications, *, platform-governance/*, allow
+      groups:
+        - platform-team
+
+    - name: developer
+      description: Developers with read-only access
+      policies:
+        - p, proj:platform-governance:developer, applications, get, platform-governance/*, allow
+      groups:
+        - developers
