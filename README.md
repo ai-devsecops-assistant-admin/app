@@ -200,7 +200,9 @@ If you experience connection or authentication issues in Codespaces:
 3. **Git Operations Fail**: Ensure GitHub CLI is authenticated with `gh auth status`
 4. **Missing Tools**: Re-run setup with `bash .devcontainer/post-create.sh`
 
-For detailed troubleshooting, see [.devcontainer/README.md](.devcontainer/README.md).
+For detailed troubleshooting, see:
+- [Codespaces Troubleshooting Guide](docs/codespaces-troubleshooting.md) (中文/English)
+- [Devcontainer Setup Guide](.devcontainer/README.md)
 
 ### Local Development Issues
 
@@ -211,7 +213,9 @@ For detailed troubleshooting, see [.devcontainer/README.md](.devcontainer/README
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Development Guide](docs/development-guide.md)
 - [Codespaces Setup](.devcontainer/README.md)
+- [Codespaces Troubleshooting](docs/codespaces-troubleshooting.md) 🆕
 - [ADR 001: Naming Convention](docs/adr/001-naming-convention-standard.md)
 - [ADR 002: SLSA Level 3](docs/adr/002-slsa-level-3-adoption.md)
 - [ADR 003: Policy as Code](docs/adr/003-policy-as-code-with-opa.md)
