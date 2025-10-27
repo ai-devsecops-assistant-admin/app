@@ -138,9 +138,6 @@ download_cli "$bin_folder" "$bin_path" "$version"
 chmod +x "$bin_path"
 
 run_command="$bin_path"
-if [ -z "$run_command" ]; then
-    fatal "Codacy cli v2 binary could not be found."
-fi
 
 if [ "$#" -eq 1 ] && [ "$1" = "download" ]; then
     echo "Codacy cli v2 download succeeded"
