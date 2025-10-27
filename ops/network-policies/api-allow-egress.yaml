@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-allow-egress
+  namespace: platform-governance
+spec:
+  podSelector:
+    matchLabels:
+      app: my-app-api
+  policyTypes:
+    - Egress
+  egress:
+    # Allow DNS
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            name: kube-system
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+      ports:
+      - protocol: UDP
+        port: 53
+
+    # Allow to database
+    - to:
+      - podSelector:
+          matchLabels:
+            app: postgresql
+      ports:
+      - protocol: TCP
+        port: 5432
+
+    # Allow to external APIs (via egress gateway)
+    - to:
+      - namespaceSelector: {}
+      ports:
+      - protocol: TCP
+        port: 443
+      - protocol: TCP
+        port: 80

@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-allow-ingress
+  namespace: platform-governance
+spec:
+  podSelector:
+    matchLabels:
+      app: my-app-api
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow from ingress controller
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ingress-nginx
+      ports:
+      - protocol: TCP
+        port: 8080
+
+    # Allow from same namespace
+    - from:
+      - podSelector: {}
+      ports:
+      - protocol: TCP
+        port: 8080
+
+    # Allow from monitoring namespace for metrics scraping
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: monitoring
+        podSelector:
+          matchLabels:
+            app: prometheus
+      ports:
+      - protocol: TCP
+        port: 8080

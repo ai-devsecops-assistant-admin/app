@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: platform-governance-limits
+  namespace: platform-governance
+spec:
+  limits:
+    - max:
+        cpu: "2"
+        memory: 4Gi
+      min:
+        cpu: 50m
+        memory: 64Mi
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      type: Container
+
+    - max:
+        cpu: "4"
+        memory: 8Gi
+      min:
+        cpu: 100m
+        memory: 128Mi
+      type: Pod

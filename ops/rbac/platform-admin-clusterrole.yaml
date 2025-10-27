@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platform-admin
+rules:
+  # Full access to platform governance resources
+  - apiGroups: ["apps", ""]
+    resources: ["deployments", "services", "configmaps", "secrets", "pods"]
+    verbs: ["*"]
+
+  # Policy management
+  - apiGroups: ["kyverno.io"]
+    resources: ["policies", "clusterpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  - apiGroups: ["templates.gatekeeper.sh", "constraints.gatekeeper.sh"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Monitoring
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors", "prometheusrules"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Networking
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
