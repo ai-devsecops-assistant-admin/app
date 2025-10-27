@@ -1,0 +1,161 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-rules
+  namespace: falco
+data:
+  platform-governance-rules.yaml: |
+    # Platform Governance Custom Falco Rules
+    # These rules detect suspicious activities specific to the platform
+
+    - rule: Unexpected Outbound Connection
+      desc: Detect unexpected outbound network connection from application pod
+      condition: >
+        outbound and container and
+        not proc.name in (curl, wget, git) and
+        not fd.sip in (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) and
+        container.image.repository in (registry.example.com/my-app-api, registry.example.com/my-app-web)
+      output: >
+        Unexpected outbound connection
+        (user=%user.name command=%proc.cmdline connection=%fd.name container=%container.name image=%container.image.repository)
+      priority: WARNING
+      tags: [network, mitre_exfiltration]
+
+    - rule: Unauthorized File Modification in App Directory
+      desc: Detect file modifications in application directory (should be read-only)
+      condition: >
+        open_write and container and
+        fd.name startswith /app and
+        not proc.name in (npm, pnpm, go, node) and
+        container.image.repository in (registry.example.com/my-app-api, registry.example.com/my-app-web)
+      output: >
+        Unauthorized file modification in /app directory
+        (user=%user.name command=%proc.cmdline file=%fd.name container=%container.name image=%container.image.repository)
+      priority: ERROR
+      tags: [filesystem, mitre_persistence]
+
+    - rule: Privileged Container Execution
+      desc: Detect privileged container execution (violates security policy)
+      condition: >
+        container_started and container and
+        container.privileged=true and
+        container.image.repository in (registry.example.com/my-app-api, registry.example.com/my-app-web)
+      output: >
+        Privileged container started (violates policy)
+        (user=%user.name container=%container.name image=%container.image.repository)
+      priority: CRITICAL
+      tags: [container, mitre_privilege_escalation]
+
+    - rule: Shell Spawned in Container
+      desc: Detect shell spawned inside application container
+      condition: >
+        spawned_process and container and
+        proc.name in (sh, bash, zsh, ksh, ash) and
+        not proc.pname in (node, npm, pnpm, go) and
+        container.image.repository in (registry.example.com/my-app-api, registry.example.com/my-app-web)
+      output: >
+        Shell spawned in container (possible intrusion)
+        (user=%user.name shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline container=%container.name image=%container.image.repository)
+      priority: WARNING
+      tags: [process, mitre_execution]
+
+    - rule: Suspicious Network Tool Execution
+      desc: Detect execution of network scanning/enumeration tools
+      condition: >
+        spawned_process and container and
+        proc.name in (nmap, netcat, nc, socat, tcpdump, wireshark, ngrep) and
+        container.image.repository in (registry.example.com/my-app-api, registry.example.com/my-app-web)
+      output: >
+        Suspicious network tool executed
+        (user=%user.name tool=%proc.name cmdline=%proc.cmdline container=%container.name image=%container.image.repository)
+      priority: CRITICAL
+      tags: [network, mitre_discovery]
+
+    - rule: Crypto Mining Activity
+      desc: Detect cryptocurrency mining activity
+      condition: >
+        spawned_process and container and
+        proc.name in (xmrig, minerd, cpuminer, ethminer, coinhive)
+      output: >
+        Cryptocurrency mining detected
+        (user=%user.name process=%proc.name cmdline=%proc.cmdline container=%container.name image=%container.image.repository)
+      priority: CRITICAL
+      tags: [process, mitre_impact]
+
+    - rule: Sensitive File Access
+      desc: Detect access to sensitive files (secrets, credentials)
+      condition: >
+        open_read and container and
+        (fd.name glob /etc/*shadow* or
+         fd.name glob /etc/*passwd* or
+         fd.name glob /root/.ssh/* or
+         fd.name glob /home/*/.ssh/* or
+         fd.name glob /var/run/secrets/kubernetes.io/*) and
+        not proc.name in (sshd, systemd, kubelet)
+      output: >
+        Sensitive file accessed
+        (user=%user.name process=%proc.name file=%fd.name container=%container.name image=%container.image.repository)
+      priority: WARNING
+      tags: [filesystem, mitre_credential_access]
+
+    - rule: Package Manager Execution in Production
+      desc: Detect package manager execution in production (sign of compromise)
+      condition: >
+        spawned_process and container and
+        proc.name in (apt, apt-get, yum, dnf, apk, pip, npm, pnpm, go) and
+        k8s.ns.name in (prod, production)
+      output: >
+        Package manager executed in production environment
+        (user=%user.name package_manager=%proc.name cmdline=%proc.cmdline namespace=%k8s.ns.name container=%container.name)
+      priority: ERROR
+      tags: [process, mitre_persistence]
+
+    - rule: Kubernetes Secret Access
+      desc: Detect direct access to Kubernetes secrets via API
+      condition: >
+        kevt and
+        ka.verb in (get, list, watch) and
+        ka.target.resource = secrets and
+        not ka.user.name in (system:serviceaccount:kube-system:*, system:node:*)
+      output: >
+        Kubernetes secret accessed
+        (user=%ka.user.name verb=%ka.verb resource=%ka.target.resource name=%ka.target.name namespace=%ka.target.namespace)
+      priority: WARNING
+      tags: [k8s, mitre_credential_access]
+
+    - rule: Container Drift Detection
+      desc: Detect process not present in container image
+      condition: >
+        container_started and container and
+        not proc.is_container_healthcheck and
+        not proc.exe_ino.is_exe_upper_layer
+      output: >
+        Container drift detected - process not in image
+        (user=%user.name process=%proc.name cmdline=%proc.cmdline container=%container.name image=%container.image.repository)
+      priority: ERROR
+      tags: [process, mitre_persistence]
+
+    - rule: Unauthorized System Binary Execution
+      desc: Detect execution of system binaries from untrusted locations
+      condition: >
+        spawned_process and container and
+        proc.name in (chmod, chown, mount, umount, insmod, modprobe) and
+        not proc.pname in (systemd, init)
+      output: >
+        Unauthorized system binary execution
+        (user=%user.name binary=%proc.name cmdline=%proc.cmdline container=%container.name image=%container.image.repository)
+      priority: ERROR
+      tags: [process, mitre_defense_evasion]
+
+    - rule: Exec into Production Pod
+      desc: Detect kubectl exec into production pods
+      condition: >
+        kevt and
+        ka.verb = create and
+        ka.target.resource = pods/exec and
+        k8s.ns.name in (prod, production)
+      output: >
+        Kubectl exec into production pod
+        (user=%ka.user.name pod=%ka.target.name namespace=%ka.target.namespace)
+      priority: WARNING
+      tags: [k8s, mitre_execution]
