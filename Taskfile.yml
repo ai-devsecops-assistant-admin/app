@@ -1,0 +1,90 @@
+version: '3'
+
+vars:
+  GO_VERSION: 1.21
+  NODE_VERSION: 20
+  PNPM_VERSION: 8.14.0
+
+tasks:
+  default:
+    desc: Display available tasks
+    cmds:
+      - task --list
+
+  bootstrap:
+    desc: Bootstrap development environment
+    cmds:
+      - ./scripts/bootstrap/setup-env.sh
+      - ./scripts/bootstrap/install-tools.sh
+
+  build:all:
+    desc: Build all components
+    cmds:
+      - task: build:api
+      - task: build:web
+      - task: build:autofix
+
+  build:api:
+    desc: Build API service
+    dir: apps/my-app
+    cmds:
+      - go build -o bin/api ./cmd/api
+
+  build:web:
+    desc: Build web UI
+    dir: apps/my-app/web
+    cmds:
+      - pnpm install
+      - pnpm run build
+
+  build:autofix:
+    desc: Build auto-fix bot
+    dir: apps/auto-fix-bot
+    cmds:
+      - go build -o bin/bot ./cmd/bot
+
+  test:all:
+    desc: Run all tests
+    cmds:
+      - task: test:unit
+      - task: test:integration
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - cd apps/my-app && go test ./...
+      - cd apps/auto-fix-bot && go test ./...
+
+  test:integration:
+    desc: Run integration tests
+    dir: apps/my-app
+    cmds:
+      - go test -tags=integration ./tests/integration/...
+
+  lint:
+    desc: Run linters
+    cmds:
+      - cd apps/my-app && golangci-lint run ./...
+      - cd apps/auto-fix-bot && golangci-lint run ./...
+      - cd apps/my-app/web && pnpm run lint
+
+  security:scan:
+    desc: Run security scans
+    cmds:
+      - task: security:trivy
+      - task: security:gitleaks
+
+  security:trivy:
+    desc: Run Trivy scan
+    cmds:
+      - trivy image --severity CRITICAL,HIGH my-app-api:latest
+
+  security:gitleaks:
+    desc: Run Gitleaks scan
+    cmds:
+      - gitleaks detect --source . --verbose
+
+  deploy:
+    desc: Deploy to environment
+    cmds:
+      - ./scripts/deploy/deploy.sh {{.ENV}}

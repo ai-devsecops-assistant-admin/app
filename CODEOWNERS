@@ -1,0 +1,24 @@
+* @platform-team
+
+# Root configs
+/.root.*.yaml @platform-team @security-team
+/gate-lock-attest.yaml @platform-team @security-team
+
+# GitHub workflows
+/.github/workflows/ @platform-team @devops-team
+
+# Security and policy
+/.config/policy/ @security-team
+/.config/security/ @security-team
+/ops/rbac/ @security-team
+
+# Infrastructure
+/deploy/ @platform-team @devops-team
+/ops/ @platform-team @devops-team
+
+# Documentation
+/docs/ @platform-team @tech-writers
+
+# Applications
+/apps/my-app/ @backend-team @frontend-team
+/apps/auto-fix-bot/ @platform-team

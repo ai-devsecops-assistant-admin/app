@@ -1,0 +1,73 @@
+name: Conftest Naming Validation
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/**'
+      - 'ops/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate Naming Conventions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Set up Conftest
+        run: |
+          wget -O - https://github.com/open-policy-agent/conftest/releases/download/v0.47.0/conftest_0.47.0_Linux_x86_64.tar.gz | tar xz
+          sudo mv conftest /usr/local/bin/
+
+      - name: Validate naming conventions
+        id: validate
+        run: |
+          set +e
+          conftest test deploy/ -p .config/conftest/policies/naming_policy.rego --output json > results.json
+          EXIT_CODE=$?
+          set -e
+
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "## Naming Convention Violations" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The following resources do not comply with naming conventions:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            jq -r '.[] | .failures[] | "- " + .msg' results.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ✅ All resources comply with naming conventions" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          exit $EXIT_CODE
+
+      - name: Comment on PR
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('results.json', 'utf8'));
+
+            let comment = '## ❌ Naming Convention Violations\n\n';
+            comment += 'The following resources do not comply with naming conventions:\n\n';
+
+            results.forEach(result => {
+              result.failures.forEach(failure => {
+                comment += `- ${failure.msg}\n`;
+              });
+            });
+
+            comment += '\n\nPlease update resource names to follow the pattern:\n';
+            comment += '`^(dev|staging|prod)-[a-z0-9-]+-(deploy|svc|ing|cm|secret)-v\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9]+)?$`\n';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

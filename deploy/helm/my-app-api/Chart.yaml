@@ -1,0 +1,13 @@
+apiVersion: v2
+name: my-app-api
+description: Helm chart for My App API service
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - api
+  - governance
+  - devsecops
+maintainers:
+  - name: Platform Team
+    email: platform-team@example.com

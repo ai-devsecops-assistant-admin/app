@@ -1,0 +1,41 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8snamingconvention
+  annotations:
+    description: Enforces naming conventions for Kubernetes resources
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sNamingConvention
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            pattern:
+              type: string
+              description: Regex pattern for naming convention
+            resourceTypes:
+              type: array
+              description: List of resource types to validate
+              items:
+                type: string
+
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8snamingconvention
+
+        violation[{"msg": msg}] {
+          # Check if resource type is in the list
+          input.review.kind.kind == input.parameters.resourceTypes[_]
+
+          # Get resource name
+          name := input.review.object.metadata.name
+
+          # Check if name matches pattern
+          not re_match(input.parameters.pattern, name)
+
+          msg := sprintf("Resource name '%s' does not match naming convention pattern: %s", [name, input.parameters.pattern])
+        }

@@ -1,0 +1,52 @@
+name: Auto Fix Bot
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-fix:
+    name: Run Auto Fix Bot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Set up Go
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version: '1.21'
+
+      - name: Build auto-fix bot
+        run: |
+          cd apps/auto-fix-bot
+          go build -o bin/bot ./cmd/bot
+
+      - name: Run auto-fix bot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd apps/auto-fix-bot
+          ./bin/bot --config .config/auto-fix/mapping.yaml
+
+      - name: Create Pull Request
+        if: success()
+        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38 # v5.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: auto-fix bot - fix violations'
+          title: '[Auto-Fix] Fix policy violations'
+          body: |
+            Automated fixes applied by the auto-fix bot.
+            
+            - Workflow security hardening
+            - Dependency updates
+            - Linting fixes
+            - Docker security improvements
+          branch: auto-fix-bot/fixes
+          delete-branch: true

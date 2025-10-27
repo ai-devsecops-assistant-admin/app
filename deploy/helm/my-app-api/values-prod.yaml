@@ -1,0 +1,58 @@
+replicaCount: 3
+
+image:
+  repository: registry.example.com/my-app-api
+  tag: "v1.0.0"
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 75
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app
+              operator: In
+              values:
+                - my-app-api
+        topologyKey: kubernetes.io/hostname
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-tls
+      hosts:
+        - api.example.com
+
+env:
+  - name: ENV
+    value: "production"
+  - name: LOG_LEVEL
+    value: "info"
+  - name: DATABASE_HOST
+    valueFrom:
+      secretKeyRef:
+        name: database-credentials
+        key: host

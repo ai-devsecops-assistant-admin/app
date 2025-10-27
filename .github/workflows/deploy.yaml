@@ -1,0 +1,103 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      version:
+        description: 'Version to deploy'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  preflight-checks:
+    name: Preflight Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Check deployment freeze
+        run: |
+          ./scripts/gate/check-freeze.sh
+
+      - name: Verify attestations
+        if: inputs.environment == 'prod'
+        run: |
+          echo "Verifying SBOM..."
+          cosign verify-attestation \
+            --type spdx \
+            --certificate-identity-regexp="^https://github.com/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            registry.example.com/my-app-api:${{ inputs.version }}
+
+          echo "Verifying SLSA provenance..."
+          cosign verify-attestation \
+            --type slsaprovenance \
+            --certificate-identity-regexp="^https://github.com/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            registry.example.com/my-app-api:${{ inputs.version }}
+
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    needs: [preflight-checks]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Set up Kubectl
+        uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e7feb7f # v4.0.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3.5
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install \
+            --namespace ${{ inputs.environment }} \
+            --values deploy/helm/my-app-api/values-${{ inputs.environment }}.yaml \
+            --set image.tag=${{ inputs.version }} \
+            --wait \
+            --timeout 10m \
+            ${{ inputs.environment }}-my-app-api-${{ inputs.version }} \
+            deploy/helm/my-app-api/
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ inputs.environment }}-my-app-api-deploy-${{ inputs.version }} \
+            -n ${{ inputs.environment }}
+
+          kubectl get pods -n ${{ inputs.environment }} -l app=my-app-api
+
+      - name: Run smoke tests
+        run: |
+          ./scripts/test/smoke-test.sh ${{ inputs.environment }}
+
+  notify:
+    name: Notify Deployment
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send notification
+        uses: 8398a7/action-slack@28ba43ae48961b90635b50953d216767a6bea486 # v3.16.2
+        with:
+          status: ${{ job.status }}
+          text: |
+            Deployment to ${{ inputs.environment }}
+            Version: ${{ inputs.version }}
+            Status: ${{ job.status }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
