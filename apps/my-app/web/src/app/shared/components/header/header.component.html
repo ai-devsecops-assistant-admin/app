@@ -1,0 +1,16 @@
+<header class="header">
+  <div class="header-content">
+    <div class="logo">
+      <a routerLink="/dashboard">DevSecOps Platform</a>
+    </div>
+    <nav class="nav">
+      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/governance" routerLinkActive="active">Governance</a>
+      <a routerLink="/compliance" routerLinkActive="active">Compliance</a>
+    </nav>
+    <div class="user-menu" *ngIf="currentUser$ | async as user">
+      <span class="username">{{ user.username }}</span>
+      <button (click)="logout()" class="logout-btn">Logout</button>
+    </div>
+  </div>
+</header>
