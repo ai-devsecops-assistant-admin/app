@@ -1,0 +1,28 @@
+version: 1
+name: Get User By ID
+steps:
+  - id: load
+    op: loadDataset
+    args:
+      dataset: users
+    out: allUsers
+
+  - id: find
+    op: findById
+    args:
+      source: "$ctx.allUsers"
+      id: "$request.params.id"
+    out: user
+
+  - op: respond
+    when: "$ctx.user != null"
+    args:
+      status: 200
+      bodyFrom: "$ctx.user"
+
+  - op: respond
+    when: "$ctx.user == null"
+    args:
+      status: 404
+      body:
+        error: "User not found"
