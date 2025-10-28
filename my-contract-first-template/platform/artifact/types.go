@@ -56,13 +56,24 @@ func NewExecRequestFromGin(c *gin.Context) (*ExecRequest, error) {
 	for _, p := range c.Params {
 		params[p.Key] = p.Value
 	}
-	q := map[string][]string(c.Request.URL.Query())
+	queryValues := c.Request.URL.Query()
+	q := make(map[string][]string, len(queryValues))
+	for key, values := range queryValues {
+		if len(values) == 0 {
+			continue
+		}
+		copied := make([]string, len(values))
+		copy(copied, values)
+		q[key] = copied
+	}
 	h := map[string][]string{}
 	for k, v := range c.Request.Header {
 		if len(v) == 0 {
 			continue
 		}
-		h[k] = v
+		copied := make([]string, len(v))
+		copy(copied, v)
+		h[k] = copied
 	}
 	body, err := readRequestBodyMap(c.Request.Body)
 	if err != nil {
@@ -118,19 +129,27 @@ func applyRequestOverrides(req *ExecRequest, raw string) error {
 	if path, ok := payload["path"].(string); ok && path != "" {
 		req.Path = path
 	}
-	if paramsRaw, ok := payload["params"].(map[string]any); ok {
+	if paramsRaw, ok := payload["params"]; ok {
+		paramsMap, ok := paramsRaw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid X-Artifact-Request header: params must be an object")
+		}
 		if req.Params == nil {
 			req.Params = map[string]string{}
 		}
-		for k, v := range paramsRaw {
+		for k, v := range paramsMap {
 			req.Params[k] = toString(v)
 		}
 	}
-	if queryRaw, ok := payload["query"].(map[string]any); ok {
+	if queryRaw, ok := payload["query"]; ok {
+		queryMap, ok := queryRaw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid X-Artifact-Request header: query must be an object")
+		}
 		if req.Query == nil {
 			req.Query = map[string][]string{}
 		}
-		for k, v := range queryRaw {
+		for k, v := range queryMap {
 			if slice := normalizeStrings(v); slice != nil {
 				req.Query[k] = slice
 				continue
@@ -138,11 +157,15 @@ func applyRequestOverrides(req *ExecRequest, raw string) error {
 			delete(req.Query, k)
 		}
 	}
-	if headersRaw, ok := payload["headers"].(map[string]any); ok {
+	if headersRaw, ok := payload["headers"]; ok {
+		headersMap, ok := headersRaw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid X-Artifact-Request header: headers must be an object")
+		}
 		if req.Headers == nil {
 			req.Headers = map[string][]string{}
 		}
-		for k, v := range headersRaw {
+		for k, v := range headersMap {
 			if slice := normalizeStrings(v); slice != nil {
 				req.Headers[k] = slice
 			}
@@ -150,19 +173,27 @@ func applyRequestOverrides(req *ExecRequest, raw string) error {
 			// This makes nil values in the override payload ignored, not deletions.
 		}
 	}
-	if bodyRaw, ok := payload["body"].(map[string]any); ok {
+	if bodyRaw, ok := payload["body"]; ok {
+		bodyMap, ok := bodyRaw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid X-Artifact-Request header: body must be an object")
+		}
 		if req.Body == nil {
 			req.Body = map[string]any{}
 		}
-		for k, v := range bodyRaw {
+		for k, v := range bodyMap {
 			req.Body[k] = v
 		}
 	}
-	if datasetRaw, ok := payload["dataset"].(map[string]any); ok {
+	if datasetRaw, ok := payload["dataset"]; ok {
+		datasetMap, ok := datasetRaw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("invalid X-Artifact-Request header: dataset must be an object")
+		}
 		if req.Dataset == nil {
 			req.Dataset = map[string]any{}
 		}
-		for k, v := range datasetRaw {
+		for k, v := range datasetMap {
 			req.Dataset[k] = v
 		}
 	}

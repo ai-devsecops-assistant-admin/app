@@ -1,3 +1,4 @@
+// Package main starts the governance API server.
 package main
 
 import (
@@ -20,11 +21,6 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Set Gin mode
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
 	}
 
 	// Create router
@@ -62,6 +58,10 @@ func main() {
 }
 
 func setupRouter(cfg *config.Config) *gin.Engine {
+	if cfg != nil && cfg.Environment == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
