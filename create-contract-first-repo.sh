@@ -481,7 +481,7 @@ if slice := normalizeStrings(v); slice != nil {
 req.Headers[k] = slice
 continue
 }
-delete(req.Headers, k)
+// Do not delete header; keep existing value as per production logic
 }
 }
 if bodyRaw, ok := payload["body"]; ok {
