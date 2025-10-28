@@ -145,9 +145,9 @@ func applyRequestOverrides(req *ExecRequest, raw string) error {
 		for k, v := range headersRaw {
 			if slice := normalizeStrings(v); slice != nil {
 				req.Headers[k] = slice
-				continue
 			}
-			delete(req.Headers, k)
+			// If normalizeStrings returns nil, do not update or delete the header.
+			// This makes nil values in the override payload ignored, not deletions.
 		}
 	}
 	if bodyRaw, ok := payload["body"].(map[string]any); ok {
