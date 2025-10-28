@@ -31,6 +31,10 @@ jobs:
           EXIT_CODE=$?
           set -e
 
+          if [ ! -s results.json ]; then
+            echo "[]" > results.json
+          fi
+
           echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
 
           if [ $EXIT_CODE -ne 0 ]; then
@@ -51,16 +55,31 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const results = JSON.parse(fs.readFileSync('results.json', 'utf8'));
+            const core = require('@actions/core');
+
+            let results = [];
+
+            try {
+              const fileContents = fs.readFileSync('results.json', 'utf8').trim();
+              if (fileContents) {
+                results = JSON.parse(fileContents);
+              }
+            } catch (error) {
+              core.warning(`Unable to parse results.json: ${error.message}`);
+            }
 
             let comment = '## ❌ Naming Convention Violations\n\n';
             comment += 'The following resources do not comply with naming conventions:\n\n';
 
-            results.forEach(result => {
-              result.failures.forEach(failure => {
-                comment += `- ${failure.msg}\n`;
+            if (results.length === 0) {
+              comment += '- No detailed failure messages were produced. Please review the workflow logs for more information.\n';
+            } else {
+              results.forEach(result => {
+                (result.failures || []).forEach(failure => {
+                  comment += `- ${failure.msg}\n`;
+                });
               });
-            });
+            }
 
             comment += '\n\nPlease update resource names to follow the pattern:\n';
             comment += '`^(dev|staging|prod)-[a-z0-9-]+-(deploy|svc|ing|cm|secret)-v\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9]+)?$`\n';
