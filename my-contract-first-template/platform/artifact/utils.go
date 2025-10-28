@@ -1,6 +1,7 @@
 package artifact
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"os"
@@ -172,12 +173,36 @@ func CleanJoin(base, p string) string {
 	return b + "/" + pp
 }
 
-func readRequestBodyMap(r io.Reader) map[string]any {
+func readRequestBodyMap(r io.Reader) (map[string]any, error) {
+	if r == nil {
+		return map[string]any{}, nil
+	}
+
+	var (
+		data []byte
+		err  error
+	)
+
+	switch rc := r.(type) {
+	case io.ReadCloser:
+		defer rc.Close()
+		data, err = io.ReadAll(rc)
+	default:
+		data, err = io.ReadAll(r)
+	}
+	if err != nil {
+		return map[string]any{}, err
+	}
+	if len(bytes.TrimSpace(data)) == 0 {
+		return map[string]any{}, nil
+	}
+
 	var m map[string]any
-	b, _ := io.ReadAll(r)
-	_ = json.Unmarshal(b, &m)
+	if err := json.Unmarshal(data, &m); err != nil {
+		return map[string]any{}, err
+	}
 	if m == nil {
 		m = map[string]any{}
 	}
-	return m
+	return m, nil
 }
