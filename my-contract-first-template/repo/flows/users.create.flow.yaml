@@ -13,8 +13,7 @@ steps:
       op: respond
       args:
         status: 400
-        body:
-          error: "$error.message"
+        bodyFrom: "$error"
 
   - op: checkUnique
     args:

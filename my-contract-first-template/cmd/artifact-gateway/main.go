@@ -38,7 +38,11 @@ func main() {
 		mockPath := artifact.CleanJoin(basePath, ep.Path)
 		r.Handle(ep.Method, mockPath, func(def artifact.EndpointDef) gin.HandlerFunc {
 			return func(c *gin.Context) {
-				req := artifact.NewExecRequestFromGin(c)
+				req, err := artifact.NewExecRequestFromGin(c)
+				if err != nil {
+					c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+					return
+				}
 				res, err := engine.Run(c.Request.Context(), def.Flow, req)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

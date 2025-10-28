@@ -276,7 +276,11 @@ for _, ep := range index.Endpoints {
 mockPath := artifact.CleanJoin(basePath, ep.Path)
 r.Handle(ep.Method, mockPath, func(def artifact.EndpointDef) gin.HandlerFunc {
 return func(c *gin.Context) {
-req := artifact.NewExecRequestFromGin(c)
+req, err := artifact.NewExecRequestFromGin(c)
+if err != nil {
+c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+return
+}
 res, err := engine.Run(c.Request.Context(), def.Flow, req)
 if err != nil {
 c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -305,6 +309,7 @@ package artifact
 
 import (
 "encoding/json"
+"fmt"
 "github.com/gin-gonic/gin"
 )
 
@@ -343,27 +348,31 @@ Args map[string]any `json:"args" yaml:"args"`
 }
 
 type ExecRequest struct {
-Method  string            `json:"method"`
-Path    string            `json:"path"`
-Params  map[string]string `json:"params"`
+Method  string              `json:"method"`
+Path    string              `json:"path"`
+Params  map[string]string   `json:"params"`
 Query   map[string][]string `json:"query"`
-Headers map[string]string `json:"headers"`
-Body    map[string]any    `json:"body"`
+Headers map[string][]string `json:"headers"`
+Body    map[string]any      `json:"body"`
 }
 
-func NewExecRequestFromGin(c *gin.Context) *ExecRequest {
+func NewExecRequestFromGin(c *gin.Context) (*ExecRequest, error) {
 params := map[string]string{}
 for _, p := range c.Params {
 params[p.Key] = p.Value
 }
 q := map[string][]string(c.Request.URL.Query())
-h := map[string]string{}
+h := map[string][]string{}
 for k, v := range c.Request.Header {
-if len(v) > 0 {
-h[k] = v[0]
+if len(v) == 0 {
+continue
 }
+h[k] = v
 }
-body := readRequestBodyMap(c.Request.Body)
+body, err := readRequestBodyMap(c.Request.Body)
+if err != nil {
+return nil, fmt.Errorf("failed to read request body: %w", err)
+}
 return &ExecRequest{
 Method:  c.Request.Method,
 Path:    c.FullPath(),
@@ -371,7 +380,7 @@ Params:  params,
 Query:   q,
 Headers: h,
 Body:    body,
-}
+}, nil
 }
 
 type ExecResponse struct {
@@ -438,6 +447,7 @@ cat > platform/artifact/utils.go << 'EOR'
 package artifact
 
 import (
+"bytes"
 "encoding/json"
 "io"
 "os"
@@ -514,7 +524,7 @@ _ = json.Unmarshal(b, &out)
 return out
 }
 
-func queryToSimple(q map[string][]string) map<string]any {
+func queryToSimple(q map[string][]string) map[string]any {
 out := map[string]any{}
 for k, v := range q {
 if len(v) == 1 {
@@ -609,14 +619,38 @@ return "/" + pp
 return b + "/" + pp
 }
 
-func readRequestBodyMap(r io.Reader) map[string]any {
+func readRequestBodyMap(r io.Reader) (map[string]any, error) {
+if r == nil {
+return map[string]any{}, nil
+}
+
+var (
+data []byte
+err error
+)
+
+switch rc := r.(type) {
+case io.ReadCloser:
+defer rc.Close()
+data, err = io.ReadAll(rc)
+default:
+data, err = io.ReadAll(r)
+}
+if err != nil {
+return map[string]any{}, err
+}
+if len(bytes.TrimSpace(data)) == 0 {
+return map[string]any{}, nil
+}
+
 var m map[string]any
-b, _ := io.ReadAll(r)
-_ = json.Unmarshal(b, &m)
+if err := json.Unmarshal(data, &m); err != nil {
+return map[string]any{}, err
+}
 if m == nil {
 m = map[string]any{}
 }
-return m
+return m, nil
 }
 EOR
 
@@ -653,7 +687,7 @@ rt := map[string]any{
 "path":    req.Path,
 "params":  req.Params,
 "query":   queryToSimple(req.Query),
-"headers": req.Headers,
+"headers": queryToSimple(req.Headers),
 "body":    req.Body,
 },
 "ctx": map[string]any{},

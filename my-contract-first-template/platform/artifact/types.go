@@ -2,6 +2,7 @@ package artifact
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,23 +46,27 @@ type ExecRequest struct {
 	Path    string              `json:"path"`
 	Params  map[string]string   `json:"params"`
 	Query   map[string][]string `json:"query"`
-	Headers map[string]string   `json:"headers"`
+	Headers map[string][]string `json:"headers"`
 	Body    map[string]any      `json:"body"`
 }
 
-func NewExecRequestFromGin(c *gin.Context) *ExecRequest {
+func NewExecRequestFromGin(c *gin.Context) (*ExecRequest, error) {
 	params := map[string]string{}
 	for _, p := range c.Params {
 		params[p.Key] = p.Value
 	}
 	q := map[string][]string(c.Request.URL.Query())
-	h := map[string]string{}
+	h := map[string][]string{}
 	for k, v := range c.Request.Header {
-		if len(v) > 0 {
-			h[k] = v[0]
+		if len(v) == 0 {
+			continue
 		}
+		h[k] = v
 	}
-	body := readRequestBodyMap(c.Request.Body)
+	body, err := readRequestBodyMap(c.Request.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read request body: %w", err)
+	}
 	return &ExecRequest{
 		Method:  c.Request.Method,
 		Path:    c.FullPath(),
@@ -69,7 +74,7 @@ func NewExecRequestFromGin(c *gin.Context) *ExecRequest {
 		Query:   q,
 		Headers: h,
 		Body:    body,
-	}
+	}, nil
 }
 
 type ExecResponse struct {
