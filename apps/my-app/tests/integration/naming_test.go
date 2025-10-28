@@ -70,8 +70,10 @@ func TestNamingValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body, _ := json.Marshal(tt.input)
-			req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/validate/naming", bytes.NewBuffer(body))
+			body, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+			req, err := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/validate/naming", bytes.NewBuffer(body))
+			assert.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
