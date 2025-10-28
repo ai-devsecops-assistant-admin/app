@@ -212,9 +212,7 @@ func normalizeStrings(v any) []string {
 	case nil:
 		return nil
 	case []string:
-		out := make([]string, len(val))
-		copy(out, val)
-		return out
+		return val
 	case []any:
 		out := make([]string, 0, len(val))
 		for _, it := range val {
