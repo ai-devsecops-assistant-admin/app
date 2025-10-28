@@ -1,4 +1,3 @@
-// Package config provides application configuration loading.
 package config
 
 import (
@@ -7,7 +6,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config holds the application configuration values.
 type Config struct {
 	Environment string
 	Port        string
@@ -24,7 +22,6 @@ type DatabaseConfig struct {
 	Database string
 }
 
-// Load reads configuration values from environment variables.
 func Load() (*Config, error) {
 	viper.AutomaticEnv()
 

@@ -27,9 +27,9 @@ func TestNamingValidation(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		input      namingRequest
 		wantStatus int
 		wantValid  bool
+		input      map[string]string
 	}{
 		{
 			name: "valid production deployment name",
@@ -71,11 +71,6 @@ func TestNamingValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body, err := json.Marshal(tt.input)
-			require.NoError(t, err)
-
-			req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/validate/naming", bytes.NewBuffer(body))
-			require.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()

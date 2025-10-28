@@ -1,4 +1,3 @@
-// Package main starts the governance API server.
 package main
 
 import (
@@ -56,11 +55,6 @@ func main() {
 
 	log.Println("Server exited")
 }
-
-func setupRouter(cfg *config.Config) *gin.Engine {
-	if cfg != nil && cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
 
 	router := gin.New()
 	router.Use(gin.Logger())

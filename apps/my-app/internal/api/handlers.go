@@ -1,4 +1,3 @@
-// Package api contains HTTP handlers for the governance service.
 package api
 
 import (
@@ -80,22 +79,6 @@ func ListResourcesHandler(c *gin.Context) {
 			"environment": "prod",
 			"isCompliant": true,
 		},
-	}
-
-	filtered := resources
-	if environment != "" || resourceType != "" {
-		filtered = make([]map[string]interface{}, 0, len(resources))
-		for _, r := range resources {
-			env, _ := r["environment"].(string)
-			if environment != "" && !strings.EqualFold(environment, env) {
-				continue
-			}
-			typ, _ := r["type"].(string)
-			if resourceType != "" && !strings.EqualFold(resourceType, typ) {
-				continue
-			}
-			filtered = append(filtered, r)
-		}
 	}
 
 	c.JSON(http.StatusOK, filtered)
