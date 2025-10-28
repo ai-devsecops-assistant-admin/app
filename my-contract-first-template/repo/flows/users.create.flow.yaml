@@ -1,0 +1,49 @@
+version: 1
+name: Create User
+steps:
+  - op: validateBody
+    args:
+      schema:
+        type: object
+        required: [name, email]
+        properties:
+          name: { type: string, minLength: 1 }
+          email: { type: string, format: email }
+    onConflict:
+      op: respond
+      args:
+        status: 400
+        bodyFrom: "$error"
+
+  - op: checkUnique
+    args:
+      source: "$request.dataset.users"
+      field: email
+      value: "$request.body.email"
+    onConflict:
+      op: respond
+      args:
+        status: 409
+        body:
+          error: "Email already exists"
+
+  - op: assignId
+    args:
+      prefix: "u_"
+    out: newId
+
+  - op: set
+    args:
+      path: "$request.body.id"
+      value: "$ctx.newId"
+
+  - op: insertRecord
+    args:
+      dataset: users
+      record: "$request.body"
+    out: saved
+
+  - op: respond
+    args:
+      status: 201
+      bodyFrom: "$ctx.saved"

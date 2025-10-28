@@ -1,4 +1,3 @@
-// Package config provides configuration management for the Platform Governance API.
 package config
 
 import (
@@ -7,7 +6,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config holds the application configuration.
 type Config struct {
 	Environment string
 	Port        string
@@ -24,7 +22,6 @@ type DatabaseConfig struct {
 	Database string
 }
 
-// Load loads and returns the application configuration from environment variables.
 func Load() (*Config, error) {
 	viper.AutomaticEnv()
 

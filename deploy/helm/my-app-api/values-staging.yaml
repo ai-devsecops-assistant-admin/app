@@ -1,0 +1,70 @@
+# Staging Environment Configuration
+replicaCount: 2
+
+image:
+  repository: registry.example.com/my-app-api
+  tag: "latest"
+
+resources:
+  limits:
+    cpu: 750m
+    memory: 768Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 75
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - my-app-api
+          topologyKey: kubernetes.io/hostname
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/rate-limit: "50"
+  hosts:
+    - host: api-staging.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-staging-tls
+      hosts:
+        - api-staging.example.com
+
+env:
+  - name: ENV
+    value: "staging"
+  - name: LOG_LEVEL
+    value: "info"
+  - name: DATABASE_HOST
+    valueFrom:
+      secretKeyRef:
+        name: database-credentials-staging
+        key: host
+  - name: DATABASE_NAME
+    value: "myapp_staging"
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true

@@ -11,7 +11,13 @@ import (
 	"github.com/example/platform-governance/apps/my-app/internal/api"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+type namingRequest struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
 
 func TestNamingValidation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -27,36 +33,36 @@ func TestNamingValidation(t *testing.T) {
 	}{
 		{
 			name: "valid production deployment name",
-			input: map[string]string{
-				"name": "prod-my-app-api-deploy-v1.0.0",
-				"type": "deployment",
+			input: namingRequest{
+				Name: "prod-my-app-api-deploy-v1.0.0",
+				Type: "deployment",
 			},
 			wantStatus: http.StatusOK,
 			wantValid:  true,
 		},
 		{
 			name: "valid staging service name",
-			input: map[string]string{
-				"name": "staging-payment-gateway-svc-v2.1.0",
-				"type": "service",
+			input: namingRequest{
+				Name: "staging-payment-gateway-svc-v2.1.0",
+				Type: "service",
 			},
 			wantStatus: http.StatusOK,
 			wantValid:  true,
 		},
 		{
 			name: "invalid name missing version",
-			input: map[string]string{
-				"name": "prod-my-app-deploy",
-				"type": "deployment",
+			input: namingRequest{
+				Name: "prod-my-app-deploy",
+				Type: "deployment",
 			},
 			wantStatus: http.StatusOK,
 			wantValid:  false,
 		},
 		{
 			name: "invalid name wrong environment",
-			input: map[string]string{
-				"name": "test-my-app-deploy-v1.0.0",
-				"type": "deployment",
+			input: namingRequest{
+				Name: "test-my-app-deploy-v1.0.0",
+				Type: "deployment",
 			},
 			wantStatus: http.StatusOK,
 			wantValid:  false,
@@ -65,8 +71,6 @@ func TestNamingValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body, _ := json.Marshal(tt.input)
-			req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/validate/naming", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
@@ -75,7 +79,7 @@ func TestNamingValidation(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, w.Code)
 
 			var response map[string]interface{}
-			err := json.Unmarshal(w.Body.Bytes(), &response)
+			err = json.Unmarshal(w.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantValid, response["valid"])
 		})

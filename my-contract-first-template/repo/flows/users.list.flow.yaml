@@ -1,0 +1,24 @@
+version: 1
+name: List Users
+steps:
+  - id: load
+    op: loadDataset
+    args:
+      dataset: users
+    out: allUsers
+
+  - id: paginate
+    op: filterAndPaginate
+    args:
+      source: "$ctx.allUsers"
+      page: "$request.query.page"
+      size: "$request.query.size"
+      q: "$request.query.q"
+      fields: ["name", "email"]
+      sort: "$request.query.sort"
+    out: result
+
+  - op: respond
+    args:
+      status: 200
+      bodyFrom: "$ctx.result"
