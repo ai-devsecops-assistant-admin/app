@@ -27,7 +27,7 @@ jobs:
         id: validate
         run: |
           set +e
-          conftest test deploy/ -p .config/conftest/policies/naming_policy.rego --output json > results.json
+          conftest test deploy/kustomize/ -p .config/conftest/policies/naming_policy.rego --output json > results.json
           EXIT_CODE=$?
           set -e
 
