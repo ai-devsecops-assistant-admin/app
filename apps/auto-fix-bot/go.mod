@@ -1,6 +1,6 @@
 module github.com/example/platform-governance/apps/auto-fix-bot
 
-go 1.21
+go 1.23
 
 require (
 	github.com/google/go-github/v57 v57.0.0
