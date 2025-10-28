@@ -367,9 +367,7 @@ for k, v := range c.Request.Header {
 if len(v) == 0 {
 continue
 }
-cp := make([]string, len(v))
-copy(cp, v)
-h[k] = cp
+h[k] = v
 }
 body, err := readRequestBodyMap(c.Request.Body)
 if err != nil {
