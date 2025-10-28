@@ -1,8 +1,9 @@
-// Package api provides HTTP handlers for the Platform Governance API.
 package api
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -80,10 +81,5 @@ func ListResourcesHandler(c *gin.Context) {
 		},
 	}
 
-	// Filter by parameters (in production, filter from database)
-	// For now, return all resources regardless of filters
-	_ = environment
-	_ = resourceType
-
-	c.JSON(http.StatusOK, resources)
+	c.JSON(http.StatusOK, filtered)
 }

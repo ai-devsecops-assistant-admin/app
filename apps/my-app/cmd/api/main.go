@@ -1,4 +1,3 @@
-// Package main provides the entry point for the Platform Governance API server.
 package main
 
 import (
@@ -21,11 +20,6 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Set Gin mode
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
 	}
 
 	// Create router
@@ -62,7 +56,6 @@ func main() {
 	log.Println("Server exited")
 }
 
-func setupRouter(_ *config.Config) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())

@@ -1,0 +1,54 @@
+# Development Environment Configuration
+replicaCount: 1
+
+image:
+  repository: registry.example.com/my-app-api
+  tag: "latest"
+  pullPolicy: Always
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+affinity: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+  hosts:
+    - host: api-dev.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-dev-tls
+      hosts:
+        - api-dev.example.com
+
+env:
+  - name: ENV
+    value: "development"
+  - name: LOG_LEVEL
+    value: "debug"
+  - name: DATABASE_HOST
+    value: "postgres-dev"
+  - name: DATABASE_NAME
+    value: "myapp_dev"
+  - name: ENABLE_DEBUG_MODE
+    value: "true"
+
+# Development-specific settings
+podDisruptionBudget:
+  enabled: false
+
+networkPolicy:
+  enabled: false

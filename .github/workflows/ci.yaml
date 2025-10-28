@@ -42,11 +42,6 @@ jobs:
           go-version: '1.21'
           cache-dependency-path: apps/my-app/go.sum
 
-      - name: Download dependencies
-        run: |
-          cd apps/my-app
-          go mod download
-
       - name: Build
         run: |
           cd apps/my-app
@@ -100,16 +95,14 @@ jobs:
           go-version: '1.21'
           cache-dependency-path: apps/my-app/go.sum
 
-      - name: Download dependencies
-        run: |
-          cd apps/my-app
-          go mod download
-
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804 # v4.0.0
+        uses: golangci/golangci-lint-action@v4
         with:
           version: latest
           working-directory: apps/my-app
+          skip-cache: false
+          skip-pkg-cache: false
+          skip-build-cache: false
 
   security:
     name: Security Scan
@@ -132,7 +125,7 @@ jobs:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@1f2d10fb689bc07a5f56f5fe5129508d2f6c5b0f # v2.3.2
+        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -150,4 +143,4 @@ jobs:
 
       - name: Run Conftest
         run: |
-          conftest test deploy/ -p .config/conftest/policies/
+          conftest test deploy/kustomize/ -p .config/conftest/policies/

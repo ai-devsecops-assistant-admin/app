@@ -18,7 +18,21 @@ Enterprise DevSecOps Platform with automated governance, compliance, and securit
 
 ## Quick Start
 
-### Prerequisites
+### Option 1: GitHub Codespaces (Recommended)
+
+The fastest way to get started is using GitHub Codespaces, which provides a pre-configured development environment:
+
+1. Click the **Code** button on GitHub
+2. Select **Create codespace on [branch]**
+3. Wait for the environment to build (first time takes ~5 minutes)
+4. Authenticate with GitHub: `gh auth login`
+5. Start developing!
+
+All dependencies and tools are pre-installed. See [.devcontainer/README.md](.devcontainer/README.md) for details.
+
+### Option 2: Local Development
+
+#### Prerequisites
 
 - Go 1.21+
 - Node.js 20+
@@ -28,7 +42,7 @@ Enterprise DevSecOps Platform with automated governance, compliance, and securit
 - Helm 3.13+
 - kubectl 1.28+
 
-### Installation
+#### Installation
 
 ```bash
 # Clone repository
@@ -175,9 +189,33 @@ helm upgrade --install \
 - [Operations SLA](https://grafana.example.com/d/ops-sla-overview)
 - [Security Overview](https://grafana.example.com/d/security-overview)
 
+## Troubleshooting
+
+### GitHub Codespaces Issues
+
+If you experience connection or authentication issues in Codespaces:
+
+1. **Authentication Required**: Run `gh auth login` and follow the prompts
+2. **Container Build Fails**: Rebuild container via Command Palette (`Cmd/Ctrl + Shift + P`) → "Codespaces: Rebuild Container"
+3. **Git Operations Fail**: Ensure GitHub CLI is authenticated with `gh auth status`
+4. **Missing Tools**: Re-run setup with `bash .devcontainer/post-create.sh`
+
+For detailed troubleshooting, see:
+- [Codespaces Troubleshooting Guide](docs/codespaces-troubleshooting.md) (中文/English)
+- [Devcontainer Setup Guide](.devcontainer/README.md)
+
+### Local Development Issues
+
+- **Build Failures**: Ensure all prerequisites are installed with correct versions
+- **Permission Denied**: Check file permissions and run bootstrap script
+- **Port Conflicts**: Change ports in configuration files
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Development Guide](docs/development-guide.md)
+- [Codespaces Setup](.devcontainer/README.md)
+- [Codespaces Troubleshooting](docs/codespaces-troubleshooting.md) 🆕
 - [ADR 001: Naming Convention](docs/adr/001-naming-convention-standard.md)
 - [ADR 002: SLSA Level 3](docs/adr/002-slsa-level-3-adoption.md)
 - [ADR 003: Policy as Code](docs/adr/003-policy-as-code-with-opa.md)

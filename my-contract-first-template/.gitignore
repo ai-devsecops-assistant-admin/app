@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+.env
+*.tmp
+/repo/.runtime/state/*
+/go-build
+.DS_Store
