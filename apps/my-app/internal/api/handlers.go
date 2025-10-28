@@ -86,10 +86,12 @@ func ListResourcesHandler(c *gin.Context) {
 	if environment != "" || resourceType != "" {
 		filtered = make([]map[string]interface{}, 0, len(resources))
 		for _, r := range resources {
-			if environment != "" && !strings.EqualFold(environment, fmt.Sprint(r["environment"])) {
+			env, _ := r["environment"].(string)
+			if environment != "" && !strings.EqualFold(environment, env) {
 				continue
 			}
-			if resourceType != "" && !strings.EqualFold(resourceType, fmt.Sprint(r["type"])) {
+			typ, _ := r["type"].(string)
+			if resourceType != "" && !strings.EqualFold(resourceType, typ) {
 				continue
 			}
 			filtered = append(filtered, r)
