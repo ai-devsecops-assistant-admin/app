@@ -81,5 +81,20 @@ func ListResourcesHandler(c *gin.Context) {
 		},
 	}
 
+	// Filter resources based on query parameters
+	filtered := make([]map[string]interface{}, 0)
+	for _, res := range resources {
+		match := true
+		if environment != "" && res["environment"] != environment {
+			match = false
+		}
+		if resourceType != "" && !strings.Contains(strings.ToLower(res["type"].(string)), strings.ToLower(resourceType)) {
+			match = false
+		}
+		if match {
+			filtered = append(filtered, res)
+		}
+	}
+
 	c.JSON(http.StatusOK, filtered)
 }

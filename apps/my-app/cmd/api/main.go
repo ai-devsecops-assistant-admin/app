@@ -56,6 +56,7 @@ func main() {
 	log.Println("Server exited")
 }
 
+func setupRouter(cfg *config.Config) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
