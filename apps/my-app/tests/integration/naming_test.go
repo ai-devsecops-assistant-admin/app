@@ -11,7 +11,6 @@ import (
 	"github.com/example/platform-governance/apps/my-app/internal/api"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type namingRequest struct {
@@ -29,7 +28,7 @@ func TestNamingValidation(t *testing.T) {
 		name       string
 		wantStatus int
 		wantValid  bool
-		input      map[string]string
+		input      namingRequest
 	}{
 		{
 			name: "valid production deployment name",
@@ -71,6 +70,10 @@ func TestNamingValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(tt.input)
+			assert.NoError(t, err)
+			req, err := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/validate/naming", bytes.NewBuffer(body))
+			assert.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
@@ -79,7 +82,7 @@ func TestNamingValidation(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, w.Code)
 
 			var response map[string]interface{}
-			err = json.Unmarshal(w.Body.Bytes(), &response)
+			err := json.Unmarshal(w.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantValid, response["valid"])
 		})
