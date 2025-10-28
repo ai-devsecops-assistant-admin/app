@@ -88,8 +88,10 @@ func ListResourcesHandler(c *gin.Context) {
 		if environment != "" && res["environment"] != environment {
 			match = false
 		}
-		if resourceType != "" && !strings.Contains(strings.ToLower(res["type"].(string)), strings.ToLower(resourceType)) {
-			match = false
+		if resourceType != "" {
+			if resType, ok := res["type"].(string); !ok || !strings.Contains(strings.ToLower(resType), strings.ToLower(resourceType)) {
+				match = false
+			}
 		}
 		if match {
 			filtered = append(filtered, res)
