@@ -206,3 +206,20 @@ func readRequestBodyMap(r io.Reader) (map[string]any, error) {
 	}
 	return m, nil
 }
+
+func normalizeStrings(v any) []string {
+	switch val := v.(type) {
+	case nil:
+		return nil
+	case []string:
+		return val
+	case []any:
+		out := make([]string, 0, len(val))
+		for _, it := range val {
+			out = append(out, toString(it))
+		}
+		return out
+	default:
+		return []string{toString(val)}
+	}
+}

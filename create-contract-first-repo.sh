@@ -283,6 +283,10 @@ return
 }
 res, err := engine.Run(c.Request.Context(), def.Flow, req)
 if err != nil {
+if stepErr, ok := err.(*artifact.StepError); ok {
+c.JSON(stepErr.Status, map[string]any{"error": stepErr.Msg, "stepId": stepErr.StepID})
+return
+}
 c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 return
 }
@@ -310,6 +314,7 @@ package artifact
 import (
 "encoding/json"
 "fmt"
+
 "github.com/gin-gonic/gin"
 )
 
@@ -334,12 +339,12 @@ Steps       []FlowStep `json:"steps" yaml:"steps"`
 }
 
 type FlowStep struct {
-ID         string                 `json:"id" yaml:"id"`
-Op         string                 `json:"op" yaml:"op"`
-Args       map[string]any         `json:"args" yaml:"args"`
-When       string                 `json:"when,omitempty" yaml:"when,omitempty"`
-OnConflict *InlineAction          `json:"onConflict,omitempty" yaml:"onConflict,omitempty"`
-Out        string                 `json:"out,omitempty" yaml:"out,omitempty"`
+ID         string         `json:"id" yaml:"id"`
+Op         string         `json:"op" yaml:"op"`
+Args       map[string]any `json:"args" yaml:"args"`
+When       string         `json:"when,omitempty" yaml:"when,omitempty"`
+OnConflict *InlineAction  `json:"onConflict,omitempty" yaml:"onConflict,omitempty"`
+Out        string         `json:"out,omitempty" yaml:"out,omitempty"`
 }
 
 type InlineAction struct {
@@ -354,6 +359,7 @@ Params  map[string]string   `json:"params"`
 Query   map[string][]string `json:"query"`
 Headers map[string][]string `json:"headers"`
 Body    map[string]any      `json:"body"`
+Dataset map[string]any      `json:"dataset"`
 }
 
 func NewExecRequestFromGin(c *gin.Context) (*ExecRequest, error) {
@@ -373,14 +379,23 @@ body, err := readRequestBodyMap(c.Request.Body)
 if err != nil {
 return nil, fmt.Errorf("failed to read request body: %w", err)
 }
-return &ExecRequest{
+req := &ExecRequest{
 Method:  c.Request.Method,
 Path:    c.FullPath(),
 Params:  params,
 Query:   q,
 Headers: h,
 Body:    body,
-}, nil
+Dataset: map[string]any{},
+}
+
+if overrideHeader := c.GetHeader("X-Artifact-Request"); overrideHeader != "" {
+if err := applyRequestOverrides(req, overrideHeader); err != nil {
+return nil, err
+}
+}
+
+return req, nil
 }
 
 type ExecResponse struct {
@@ -401,6 +416,70 @@ Msg    string
 }
 
 func (e *StepError) Error() string { return e.Msg }
+
+func applyRequestOverrides(req *ExecRequest, raw string) error {
+var payload map[string]any
+if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+return fmt.Errorf("invalid X-Artifact-Request header: %w", err)
+}
+
+if method, ok := payload["method"].(string); ok && method != "" {
+req.Method = method
+}
+if path, ok := payload["path"].(string); ok && path != "" {
+req.Path = path
+}
+if paramsRaw, ok := payload["params"].(map[string]any); ok {
+if req.Params == nil {
+req.Params = map[string]string{}
+}
+for k, v := range paramsRaw {
+req.Params[k] = toString(v)
+}
+}
+if queryRaw, ok := payload["query"].(map[string]any); ok {
+if req.Query == nil {
+req.Query = map[string][]string{}
+}
+for k, v := range queryRaw {
+if slice := normalizeStrings(v); slice != nil {
+req.Query[k] = slice
+continue
+}
+delete(req.Query, k)
+}
+}
+if headersRaw, ok := payload["headers"].(map[string]any); ok {
+if req.Headers == nil {
+req.Headers = map[string][]string{}
+}
+for k, v := range headersRaw {
+if slice := normalizeStrings(v); slice != nil {
+req.Headers[k] = slice
+continue
+}
+delete(req.Headers, k)
+}
+}
+if bodyRaw, ok := payload["body"].(map[string]any); ok {
+if req.Body == nil {
+req.Body = map[string]any{}
+}
+for k, v := range bodyRaw {
+req.Body[k] = v
+}
+}
+if datasetRaw, ok := payload["dataset"].(map[string]any); ok {
+if req.Dataset == nil {
+req.Dataset = map[string]any{}
+}
+for k, v := range datasetRaw {
+req.Dataset[k] = v
+}
+}
+
+return nil
+}
 EOR
 
 cat > platform/artifact/loader.go << 'EOR'
@@ -651,6 +730,25 @@ if m == nil {
 m = map[string]any{}
 }
 return m, nil
+}
+
+func normalizeStrings(v any) []string {
+switch val := v.(type) {
+case nil:
+return nil
+case []string:
+out := make([]string, len(val))
+copy(out, val)
+return out
+case []any:
+out := make([]string, 0, len(val))
+for _, it := range val {
+out = append(out, toString(it))
+}
+return out
+default:
+return []string{toString(val)}
+}
 }
 EOR
 
