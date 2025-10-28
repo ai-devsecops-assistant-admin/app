@@ -45,6 +45,10 @@ func main() {
 				}
 				res, err := engine.Run(c.Request.Context(), def.Flow, req)
 				if err != nil {
+					if stepErr, ok := err.(*artifact.StepError); ok {
+						c.JSON(stepErr.Status, map[string]any{"error": stepErr.Msg, "stepId": stepErr.StepID})
+						return
+					}
 					c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 					return
 				}

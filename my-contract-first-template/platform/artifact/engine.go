@@ -33,6 +33,7 @@ func (e *Executor) Run(ctx context.Context, flowFile string, req *ExecRequest) (
 			"query":   queryToSimple(req.Query),
 			"headers": queryToSimple(req.Headers),
 			"body":    req.Body,
+			"dataset": req.Dataset,
 		},
 		"ctx": map[string]any{},
 	}
