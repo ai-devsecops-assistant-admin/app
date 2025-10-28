@@ -1,0 +1,28 @@
+# Gitleaks ignore file
+# This file contains paths and patterns that should be excluded from secret scanning
+
+# Sealed Secrets examples (encrypted values, not real secrets)
+ops/secrets/example-sealed-secret.yaml
+
+# Documentation and examples
+docs/**/*.md
+SECURITY.md
+CONTRIBUTING.md
+
+# Test files with example data
+**/*_test.go
+**/test/**
+**/tests/**
+
+# Kubernetes manifests with secret references (not actual secrets)
+# These files reference secrets via secretKeyRef, not hardcoded values
+ops/observability/grafana-deployment.yaml
+ops/observability/alertmanager-deployment.yaml
+ops/observability/prometheus-deployment.yaml
+
+# GitOps configuration (references to secrets, not actual secrets)
+deploy/kustomize/overlays/**/secrets.yaml
+
+# Policy definitions containing the word "secret" as part of resource types
+.config/policy/**/*.yaml
+.config/kyverno/**/*.yaml
