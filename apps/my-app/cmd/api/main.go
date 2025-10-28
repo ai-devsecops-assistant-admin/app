@@ -1,3 +1,4 @@
+// Package main provides the entry point for the Platform Governance API server.
 package main
 
 import (
@@ -61,7 +62,7 @@ func main() {
 	log.Println("Server exited")
 }
 
-func setupRouter(cfg *config.Config) *gin.Engine {
+func setupRouter(_ *config.Config) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())

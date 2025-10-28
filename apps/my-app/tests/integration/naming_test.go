@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,9 +21,9 @@ func TestNamingValidation(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		input      map[string]string
 		wantStatus int
 		wantValid  bool
+		input      map[string]string
 	}{
 		{
 			name: "valid production deployment name",
@@ -65,7 +66,7 @@ func TestNamingValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			body, _ := json.Marshal(tt.input)
-			req, _ := http.NewRequest("POST", "/api/v1/validate/naming", bytes.NewBuffer(body))
+			req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/v1/validate/naming", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()

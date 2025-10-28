@@ -1,3 +1,4 @@
+// Package api provides HTTP handlers for the Platform Governance API.
 package api
 
 import (
@@ -79,10 +80,10 @@ func ListResourcesHandler(c *gin.Context) {
 		},
 	}
 
-	// Filter by parameters
-	if environment != "" || resourceType != "" {
-		// In production, filter from database
-	}
+	// Filter by parameters (in production, filter from database)
+	// For now, return all resources regardless of filters
+	_ = environment
+	_ = resourceType
 
 	c.JSON(http.StatusOK, resources)
 }

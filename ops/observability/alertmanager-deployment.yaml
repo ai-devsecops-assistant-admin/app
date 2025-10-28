@@ -190,13 +190,16 @@ spec:
   selector:
     app: alertmanager
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: alertmanager-secrets
-  namespace: observability
-type: Opaque
-stringData:
-  smtp-password: "changeme"
-  slack-webhook-url: "https://hooks.slack.com/services/EXAMPLE"
-  pagerduty-service-key: "changeme"
+# NOTE: This Secret should be created externally using Sealed Secrets or a secret management tool.
+# Example using kubectl:
+#   kubectl create secret generic alertmanager-secrets \
+#     --from-literal=smtp-password='YOUR_SMTP_PASSWORD' \
+#     --from-literal=slack-webhook-url='https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK' \
+#     --from-literal=pagerduty-service-key='YOUR_PAGERDUTY_KEY' \
+#     -n observability
+#
+# Or create a SealedSecret:
+#   ./scripts/security/seal-secret.sh alertmanager-secrets observability \
+#     smtp-password=YOUR_SMTP_PASSWORD \
+#     slack-webhook-url=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK \
+#     pagerduty-service-key=YOUR_PAGERDUTY_KEY

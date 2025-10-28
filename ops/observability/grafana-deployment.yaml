@@ -195,11 +195,14 @@ data:
         options:
           path: /var/lib/grafana/dashboards
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana-admin
-  namespace: observability
-type: Opaque
-stringData:
-  password: "changeme"  # This should be replaced with a secure password or use Sealed Secrets
+# NOTE: This Secret should be created externally using Sealed Secrets or a secret management tool.
+# Example using kubectl:
+#   kubectl create secret generic grafana-admin \
+#     --from-literal=password='YOUR_SECURE_PASSWORD' \
+#     -n observability
+#
+# Or create a SealedSecret:
+#   ./scripts/security/seal-secret.sh grafana-admin observability password=YOUR_SECURE_PASSWORD
+#
+# For development/testing only, you can create the secret manually:
+#   kubectl create secret generic grafana-admin --from-literal=password=admin -n observability
