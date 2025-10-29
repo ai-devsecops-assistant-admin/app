@@ -3,6 +3,7 @@ package artifact
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -10,7 +11,13 @@ import (
 	"strings"
 )
 
-func readJSONFile(path string) ([]byte, error) { return os.ReadFile(path) }
+func readJSONFile(path string) ([]byte, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read file %s: %w", path, err)
+	}
+	return b, nil
+}
 
 func toSlice(v any) ([]any, bool) {
 	switch a := v.(type) {
@@ -51,6 +58,8 @@ func toString(v any) string {
 		return strconv.FormatInt(t, 10)
 	case bool:
 		return strconv.FormatBool(t)
+	case nil:
+		return ""
 	default:
 		b, _ := json.Marshal(t)
 		return string(b)
@@ -124,14 +133,17 @@ func getByPath(root map[string]any, path []string) any {
 }
 
 func writeJSONPretty(path string, v any) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("mkdir: %w", err)
 	}
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
-	return os.WriteFile(path, b, 0644)
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
+	return nil
 }
 
 func evalCondition(expr string, rt map[string]any) (bool, error) {
@@ -139,29 +151,48 @@ func evalCondition(expr string, rt map[string]any) (bool, error) {
 	if expr == "" {
 		return true, nil
 	}
+
+	// Simple path existence check
+	if strings.HasPrefix(expr, "$") && !strings.Contains(expr, "==") && !strings.Contains(expr, "!=") {
+		val := getByPath(rt, toPath(expr))
+		return val != nil, nil
+	}
+
+	// Equality check
 	if strings.Contains(expr, "==") {
-		parts := strings.Split(expr, "==")
-		l := getByPath(rt, toPath(strings.TrimSpace(parts[0])))
-		r := strings.TrimSpace(parts[1])
-		if r == "null" {
-			return l == nil, nil
+		parts := strings.SplitN(expr, "==", 2)
+		if len(parts) != 2 {
+			return false, fmt.Errorf("invalid condition: %s", expr)
 		}
-		return toString(l) == r, nil
+		left := getByPath(rt, toPath(strings.TrimSpace(parts[0])))
+		right := strings.TrimSpace(parts[1])
+		if right == "null" {
+			return left == nil, nil
+		}
+		return toString(left) == strings.Trim(right, `"`), nil
 	}
+
+	// Inequality check
 	if strings.Contains(expr, "!=") {
-		parts := strings.Split(expr, "!=")
-		l := getByPath(rt, toPath(strings.TrimSpace(parts[0])))
-		r := strings.TrimSpace(parts[1])
-		if r == "null" {
-			return l != nil, nil
+		parts := strings.SplitN(expr, "!=", 2)
+		if len(parts) != 2 {
+			return false, fmt.Errorf("invalid condition: %s", expr)
 		}
-		return toString(l) != r, nil
+		left := getByPath(rt, toPath(strings.TrimSpace(parts[0])))
+		right := strings.TrimSpace(parts[1])
+		if right == "null" {
+			return left != nil, nil
+		}
+		return toString(left) != strings.Trim(right, `"`), nil
 	}
+
+	// Negation check
 	if strings.HasPrefix(expr, "!") {
-		l := getByPath(rt, toPath(strings.TrimPrefix(expr, "!")))
-		return l == nil || l == false, nil
+		val := getByPath(rt, toPath(strings.TrimPrefix(expr, "!")))
+		return val == nil || val == false, nil
 	}
-	return false, nil
+
+	return false, fmt.Errorf("unsupported condition: %s", expr)
 }
 
 func CleanJoin(base, p string) string {
@@ -224,4 +255,82 @@ func normalizeStrings(v any) []string {
 	default:
 		return []string{toString(val)}
 	}
+}
+
+func toStringSlice(v any) []string {
+	if v == nil {
+		return []string{}
+	}
+
+	switch val := v.(type) {
+	case []any:
+		result := make([]string, len(val))
+		for i, item := range val {
+			result[i] = toString(item)
+		}
+		return result
+	case []string:
+		return val
+	default:
+		return []string{toString(v)}
+	}
+}
+
+func setByPath(root map[string]any, path []string, value any) {
+	cur := root
+	for i, p := range path {
+		if i == len(path)-1 {
+			cur[p] = value
+			return
+		}
+		next, ok := cur[p].(map[string]any)
+		if !ok {
+			next = map[string]any{}
+			cur[p] = next
+		}
+		cur = next
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func clamp(v, minV, maxV int) int {
+	if v < minV {
+		return minV
+	}
+	if v > maxV {
+		return maxV
+	}
+	return v
+}
+
+// ReadBodyJSON reads request body as JSON map
+func ReadBodyJSON(r io.ReadCloser) map[string]any {
+	if r == nil {
+		return map[string]any{}
+	}
+	defer func() {
+		_ = r.Close()
+	}()
+	b, err := io.ReadAll(r)
+	if err != nil || len(b) == 0 {
+		return map[string]any{}
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err == nil {
+		return m
+	}
+	return map[string]any{}
 }
