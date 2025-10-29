@@ -1,0 +1,104 @@
+name: Repo Doctor Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  repo-doctor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      - name: Install jq and yq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          sudo snap install yq
+
+      - name: Ensure repo-doctor.sh is executable
+        run: chmod +x scripts/repo-doctor.sh
+
+      - name: Dry-run repo doctor and capture report
+        id: doctor
+        env:
+          DRY_RUN: "1"
+          MAX_PASSES: "2"
+          ENFORCE_FLOW_OPS: "1"
+        run: |
+          set -euo pipefail
+          LOG_FILE=".doctor_dryrun.log"
+          REPORT_FILE=".doctor_report.md"
+
+          {
+            echo "=== Repo Doctor Dry-Run Start ==="
+            ./scripts/repo-doctor.sh || true
+            echo "=== Repo Doctor Dry-Run End ==="
+          } | tee "$LOG_FILE"
+
+          echo "# Repo Doctor Report (Dry-Run)" > "$REPORT_FILE"
+          echo >> "$REPORT_FILE"
+
+          echo "## Detected Fixes" >> "$REPORT_FILE"
+          if grep -q "Summary of fixes:" "$LOG_FILE"; then
+            awk '/Summary of fixes:/{flag=1;next}/Final sanity checks/{flag=0}flag' "$LOG_FILE" \
+              | sed 's/^/- /' >> "$REPORT_FILE"
+          else
+            echo "- 無修復項目或腳本未輸出摘要。" >> "$REPORT_FILE"
+          fi
+          echo >> "$REPORT_FILE"
+
+          echo "## Build Validation" >> "$REPORT_FILE"
+          if go build ./... >/dev/null 2>&1; then
+            echo "- ✅ go build 成功" >> "$REPORT_FILE"
+            echo "build_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "- ❌ go build 失敗（請在本地執行非乾跑修復）" >> "$REPORT_FILE"
+            echo "build_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo >> "$REPORT_FILE"
+          echo "## Next Steps" >> "$REPORT_FILE"
+          echo "- 若偵測到修復項目，請在本地執行：DRY_RUN=0 ./scripts/repo-doctor.sh 並提交變更。" >> "$REPORT_FILE"
+
+          if grep -q "Summary of fixes:" "$LOG_FILE"; then
+            FIX_COUNT="$(awk '/Summary of fixes:/{flag=1;next}/Final sanity checks/{flag=0}flag' "$LOG_FILE" | sed '/^\s*$/d' | wc -l | tr -d ' ')"
+          else
+            FIX_COUNT="0"
+          fi
+          echo "fix_count=$FIX_COUNT" >> "$GITHUB_OUTPUT"
+          echo "report_path=$REPORT_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR with report
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: ${{ steps.doctor.outputs.report_path }}
+
+      - name: Fail when fixes detected and annotate PR
+        if: github.event_name == 'pull_request' && steps.doctor.outputs.fix_count != '0'
+        run: |
+          echo "::error::偵測到 ${{ steps.doctor.outputs.fix_count }} 項修復。請在本地執行：DRY_RUN=0 ./scripts/repo-doctor.sh 並提交變更。"
+          exit 1
+
+      - name: Fail if build fails
+        run: |
+          if ! go build ./... >/dev/null 2>&1; then
+            echo "Build failed after dry-run. Please run repo-doctor without dry-run locally and push fixes."
+            exit 1
+          fi
