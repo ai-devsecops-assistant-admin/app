@@ -1,0 +1,116 @@
+name: Repo Doctor CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  repo-doctor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      - name: Install jq and yq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          sudo snap install yq
+
+      - name: Ensure repo-doctor.sh is executable
+        run: chmod +x scripts/repo-doctor.sh
+
+      - name: Dry-run repo doctor and capture report
+        id: doctor
+        env:
+          DRY_RUN: "1"
+          MAX_PASSES: "2"
+          ENFORCE_FLOW_OPS: "1"
+        run: |
+          set -euo pipefail
+          # 執行乾跑並收集輸出
+          # 將重要訊息收斂為一份評論用報告
+          LOG_FILE=".doctor_dryrun.log"
+          REPORT_FILE=".doctor_report.md"
+
+          {
+            echo "=== Repo Doctor Dry-Run Start ==="
+            ./scripts/repo-doctor.sh || true
+            echo "=== Repo Doctor Dry-Run End ==="
+          } | tee "$LOG_FILE"
+
+          # 從輸出中萃取修復摘要：腳本內建 "Summary of fixes:" 與列點
+          echo "# Repo Doctor Report (Dry-Run)" > "$REPORT_FILE"
+          echo >> "$REPORT_FILE"
+
+          if grep -q "Summary of fixes:" "$LOG_FILE"; then
+            echo "## Detected Fixes" >> "$REPORT_FILE"
+            # 擷取 summary 區塊之後的內容
+            awk '/Summary of fixes:/{flag=1;next}/Final sanity checks/{flag=0}flag' "$LOG_FILE" \
+              | sed 's/^/- /' >> "$REPORT_FILE"
+            echo >> "$REPORT_FILE"
+          else
+            echo "## Detected Fixes" >> "$REPORT_FILE"
+            echo "- 無修復項目或腳本未輸出摘要。" >> "$REPORT_FILE"
+            echo >> "$REPORT_FILE"
+          fi
+
+          echo "## Build Validation" >> "$REPORT_FILE"
+          # 乾跑之後做一次 build 檢查
+          if go build ./... >/dev/null 2>&1; then
+            echo "- ✅ go build 成功" >> "$REPORT_FILE"
+          else
+            echo "- ❌ go build 失敗（請參考日誌並在本地執行非乾跑修復）" >> "$REPORT_FILE"
+          fi
+
+          echo >> "$REPORT_FILE"
+          echo "## Next Steps" >> "$REPORT_FILE"
+          echo "- 若偵測到修復項目，請在本地執行：DRY_RUN=0 ./scripts/repo-doctor.sh 並提交變更。" >> "$REPORT_FILE"
+          echo "- 在 PR 中可附上本報告，讓審閱者了解即將修復或已修復項目。" >> "$REPORT_FILE"
+
+          echo "report_path=$REPORT_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR with report
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: ${{ steps.doctor.outputs.report_path }}
+
+      - name: Fail if build fails
+        run: |
+          # 與上一步 report 一致的判斷，確保 CI 狀態反映可建置性
+          if ! go build ./... >/dev/null 2>&1; then
+            echo "Build failed after dry-run. Please run repo-doctor without dry-run locally and push fixes."
+            exit 1
+          fi
+
+      # 可選：在 push 到主要分支時，若想自動提交修復，可新增下方步驟（註解預設關閉）
+      # - name: Auto-fix and commit (main only)
+      #   if: github.ref == 'refs/heads/main'
+      #   env:
+      #     GIT_AUTHOR_NAME: github-actions
+      #     GIT_AUTHOR_EMAIL: github-actions@users.noreply.github.com
+      #     GIT_COMMITTER_NAME: github-actions
+      #     GIT_COMMITTER_EMAIL: github-actions@users.noreply.github.com
+      #   run: |
+      #     set -euo pipefail
+      #     DRY_RUN=0 ./scripts/repo-doctor.sh
+      #     if ! git diff --quiet; then
+      #       git add -A
+      #       git commit -m "chore(repo-doctor): auto fix"
+      #       git push
+      #     fi
