@@ -25,14 +25,28 @@ func (e *Executor) Run(ctx context.Context, flowFile string, req *ExecRequest) (
 		return nil, &StepError{Status: 500, Msg: "failed to load flow: " + err.Error()}
 	}
 
+	// Convert headers to simple map
+	headers := map[string]any{}
+	for k, v := range req.Headers {
+		if len(v) == 1 {
+			headers[k] = v[0]
+		} else if len(v) > 1 {
+			tmp := make([]any, len(v))
+			for i := range v {
+				tmp[i] = v[i]
+			}
+			headers[k] = tmp
+		}
+	}
+
 	rt := map[string]any{
 		"request": map[string]any{
 			"method":  req.Method,
 			"path":    req.Path,
 			"params":  req.Params,
 			"query":   queryToSimple(req.Query),
-			"headers": queryToSimple(req.Headers),
-			"body":    req.Body,
+			"headers": headers,
+			"body":    deepCopy(req.Body),
 			"dataset": req.Dataset,
 		},
 		"ctx": map[string]any{},
@@ -72,9 +86,13 @@ func (e *Executor) Run(ctx context.Context, flowFile string, req *ExecRequest) (
 		case "checkUnique":
 			err = opCheckUnique(step.Args, rt)
 		case "assignId":
-			out, err = opAssignId(step.Args)
+			out, err = opAssignId(step.Args, rt)
 		case "insertRecord":
 			out, err = opInsertRecord(e.repoPath, step.Args, rt)
+		case "updateRecord":
+			out, err = opUpdateRecord(e.repoPath, step.Args, rt)
+		case "deleteRecord":
+			err = opDeleteRecord(e.repoPath, step.Args, rt)
 		case "now":
 			out, err = opNow()
 		case "set":
@@ -274,7 +292,8 @@ func opValidateBody(args map[string]any, rt map[string]any) error {
 func opCheckUnique(args map[string]any, rt map[string]any) error {
 	src := getByPath(rt, toPath(str(args["source"])))
 	field := str(args["field"])
-	value := toString(getByPath(rt, toPath(str(args["value"]))))
+	value := toString(getExpr(rt, args["value"], ""))
+	excludeID := toString(getExpr(rt, args["excludeId"], ""))
 
 	arr, ok := toSlice(src)
 	if !ok {
@@ -286,40 +305,161 @@ func opCheckUnique(args map[string]any, rt map[string]any) error {
 		if !ok {
 			continue
 		}
+
+		// Skip excluded ID (for updates)
+		if excludeID != "" && toString(m["id"]) == excludeID {
+			continue
+		}
+
 		if toString(m[field]) == value {
-			return &StepError{Status: 409, Msg: "value already exists"}
+			return &StepError{
+				Status: 409,
+				Msg:    fmt.Sprintf("duplicate value '%s' for field '%s'", value, field),
+			}
 		}
 	}
 	return nil
 }
 
-func opAssignId(args map[string]any) (any, error) {
+func opAssignId(args map[string]any, rt map[string]any) (any, error) {
 	prefix := str(args["prefix"])
-	return prefix + fmt.Sprintf("%d", time.Now().UnixNano()), nil
+	if prefix == "" {
+		prefix = "id_"
+	}
+
+	timestamp := time.Now().UnixNano()
+	id := fmt.Sprintf("%s%d", prefix, timestamp)
+	return id, nil
 }
 
 func opInsertRecord(repoPath string, args map[string]any, rt map[string]any) (any, error) {
-	ds := str(args["dataset"])
-	record := getByPath(rt, toPath(str(args["record"])))
-	if ds == "" || record == nil {
-		return nil, errors.New("insertRecord requires dataset and record")
+	dataset := str(args["dataset"])
+	record := getExpr(rt, args["record"], nil)
+
+	if dataset == "" {
+		return nil, errors.New("insertRecord requires dataset name")
+	}
+	if record == nil {
+		return nil, errors.New("insertRecord requires record data")
 	}
 
 	recordMap, ok := toMap(record)
 	if !ok {
-		return nil, errors.New("record must be object")
+		return nil, errors.New("record must be an object")
 	}
 
-	path := filepath.Join(repoPath, ".runtime", "state", ds+".json")
+	stateFile := filepath.Join(repoPath, ".runtime", "state", dataset+".json")
+
 	var data []any
-	if b, err := readJSONFile(path); err == nil {
+	if b, err := readJSONFile(stateFile); err == nil {
 		_ = json.Unmarshal(b, &data)
 	}
+
 	data = append(data, recordMap)
-	if err := writeJSONPretty(path, data); err != nil {
-		return nil, err
+
+	if err := writeJSONPretty(stateFile, data); err != nil {
+		return nil, fmt.Errorf("failed to save record: %w", err)
 	}
+
 	return recordMap, nil
+}
+
+func opUpdateRecord(repoPath string, args map[string]any, rt map[string]any) (any, error) {
+	dataset := str(args["dataset"])
+	id := toString(getExpr(rt, args["id"], ""))
+	patch := getExpr(rt, args["patch"], nil)
+
+	if dataset == "" {
+		return nil, errors.New("updateRecord requires dataset name")
+	}
+	if id == "" {
+		return nil, errors.New("updateRecord requires record id")
+	}
+
+	patchMap, ok := toMap(patch)
+	if !ok {
+		return nil, errors.New("patch must be an object")
+	}
+
+	stateFile := filepath.Join(repoPath, ".runtime", "state", dataset+".json")
+
+	var data []any
+	if b, err := readJSONFile(stateFile); err == nil {
+		_ = json.Unmarshal(b, &data)
+	}
+
+	found := false
+	var updated map[string]any
+	for i, it := range data {
+		m, ok := toMap(it)
+		if !ok {
+			continue
+		}
+		if toString(m["id"]) == id {
+			// Merge patch into existing record
+			for k, v := range patchMap {
+				m[k] = v
+			}
+			data[i] = m
+			updated = m
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, &StepError{Status: 404, Msg: "record not found"}
+	}
+
+	if err := writeJSONPretty(stateFile, data); err != nil {
+		return nil, fmt.Errorf("failed to update record: %w", err)
+	}
+
+	return updated, nil
+}
+
+func opDeleteRecord(repoPath string, args map[string]any, rt map[string]any) error {
+	dataset := str(args["dataset"])
+	id := toString(getExpr(rt, args["id"], ""))
+
+	if dataset == "" {
+		return errors.New("deleteRecord requires dataset name")
+	}
+	if id == "" {
+		return errors.New("deleteRecord requires record id")
+	}
+
+	stateFile := filepath.Join(repoPath, ".runtime", "state", dataset+".json")
+
+	var data []any
+	if b, err := readJSONFile(stateFile); err == nil {
+		_ = json.Unmarshal(b, &data)
+	}
+
+	found := false
+	newData := make([]any, 0, len(data))
+	for _, it := range data {
+		m, ok := toMap(it)
+		if !ok {
+			newData = append(newData, it)
+			continue
+		}
+		if toString(m["id"]) == id {
+			found = true
+			continue
+		}
+		newData = append(newData, m)
+	}
+
+	if !found {
+		return &StepError{Status: 404, Msg: "record not found"}
+	}
+
+	if err := writeJSONPretty(stateFile, newData); err != nil {
+		return fmt.Errorf("failed to delete record: %w", err)
+	}
+
+	return nil
 }
 
 func opNow() (any, error) {
@@ -334,22 +474,6 @@ func opSet(args map[string]any, rt map[string]any) error {
 	value := getExpr(rt, args["value"], nil)
 	setByPath(rt, toPath(pathExpr), value)
 	return nil
-}
-
-func setByPath(root map[string]any, path []string, value any) {
-	cur := root
-	for i, p := range path {
-		if i == len(path)-1 {
-			cur[p] = value
-			return
-		}
-		next, ok := cur[p].(map[string]any)
-		if !ok {
-			next = map[string]any{}
-			cur[p] = next
-		}
-		cur = next
-	}
 }
 
 func opRespond(args map[string]any, rt map[string]any) (*ExecResponse, error) {
@@ -371,46 +495,4 @@ func opRespond(args map[string]any, rt map[string]any) (*ExecResponse, error) {
 	}
 
 	return &ExecResponse{Status: status, Headers: headers, Body: body}, nil
-}
-
-func clamp(v, minV, maxV int) int {
-	if v < minV {
-		return minV
-	}
-	if v > maxV {
-		return maxV
-	}
-	return v
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func toStringSlice(v any) []string {
-	if v == nil {
-		return nil
-	}
-	switch arr := v.(type) {
-	case []any:
-		out := make([]string, 0, len(arr))
-		for _, it := range arr {
-			out = append(out, toString(it))
-		}
-		return out
-	case []string:
-		return arr
-	default:
-		return nil
-	}
 }
