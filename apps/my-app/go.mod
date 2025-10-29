@@ -1,6 +1,8 @@
 module github.com/example/platform-governance/apps/my-app
 
-go 1.23
+go 1.24
+
+toolchain go1.24.7
 
 require (
 	github.com/chromedp/chromedp v0.14.2
