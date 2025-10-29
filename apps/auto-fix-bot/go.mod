@@ -2,6 +2,7 @@ module github.com/example/platform-governance/apps/auto-fix-bot
 
 go 1.23.0
 
+toolchain go1.24.7
 
 require (
 	github.com/google/go-github/v57 v57.0.0
